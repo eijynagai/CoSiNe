@@ -1,0 +1,4 @@
+Method,Execution Time (s),Number of Communities,NMI,ARI
+Louvain,0.008449077606201172,9,0.588,0.367
+Leiden,0.008141756057739258,11,0.552,0.271
+Infomap,0.004830121994018555,2,0.611,0.64
