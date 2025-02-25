@@ -1,5 +1,5 @@
 Method,Graph Used,Execution Time (s),Number of Communities,NMI,ARI
-LouvainSigned,signed,0.01,8,0.602,0.366
-Louvain,pos,0.01,9,0.582,0.322
-Leiden,pos,0.008,8,0.582,0.353
-Infomap,pos,0.005,19,0.482,0.297
+LouvainSigned,signed,0.009,8,0.538,0.3
+Louvain,pos,0.008,9,0.55,0.268
+Leiden,pos,0.008,8,0.605,0.343
+Infomap,pos,0.003,19,0.482,0.297

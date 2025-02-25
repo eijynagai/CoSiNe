@@ -1,7 +1,7 @@
 from CoSiNe.community_detection.external.louvain_signed import LouvainSigned
 
 
-def run_louvain_signed(G_positive, G_negative, alpha=1.0, resolution=1):
+def run_louvain_signed(G_positive, G_negative, alpha=6.0, resolution=1):
     """
     Runs LouvainSigned on the given positive and negative graphs.
 
