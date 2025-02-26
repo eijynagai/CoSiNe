@@ -1,0 +1,1 @@
+poetry run python -m CoSiNe.benchmarks.benchmark_community_detection_signed_graph

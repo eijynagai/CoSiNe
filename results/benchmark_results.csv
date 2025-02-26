@@ -1,5 +1,7 @@
 Method,Graph Used,Execution Time (s),Number of Communities,NMI,ARI
-LouvainSigned,signed,0.009,8,0.538,0.3
-Louvain,pos,0.008,9,0.55,0.268
-Leiden,pos,0.008,8,0.605,0.343
-Infomap,pos,0.003,19,0.482,0.297
+LouvainSigned,signed,0.01,9,0.585,0.347
+Louvain,pos,0.011,10,0.544,0.287
+Leiden,pos,0.011,8,0.59,0.361
+Infomap,pos,0.005,19,0.482,0.297
+Greedy modularity,pos,0.029,9,0.585,0.307
+Spectral clustering,pos,0.032,2,0.503,0.291
