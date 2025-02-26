@@ -9,7 +9,8 @@ from CoSiNe.community_detection.infomap import run_infomap
 from CoSiNe.community_detection.leiden import run_leiden
 from CoSiNe.community_detection.louvain import run_louvain
 from CoSiNe.community_detection.louvain_signed import run_louvain_signed
-
+from CoSiNe.community_detection.greedy_modularity import run_greedy_modularity
+from CoSiNe.community_detection.spectral_clustering import run_spectral_clustering
 
 def get_ground_truth_communities(G):
     """
@@ -48,6 +49,8 @@ def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg):
         "Louvain": (run_louvain, "pos"),
         "Leiden": (run_leiden, "pos"),
         "Infomap": (run_infomap, "pos"),
+        "Greedy modularity": (run_greedy_modularity, "pos"),
+        "Spectral clustering": (run_spectral_clustering, "pos")
     }
 
     # We'll always use ground truth from the same place (both graphs
