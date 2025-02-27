@@ -5,12 +5,13 @@ import networkx as nx
 from sklearn.metrics.cluster import adjusted_rand_score, normalized_mutual_info_score
 
 from CoSiNe.community_detection.external.signedLFR import signed_LFR_benchmark_graph
+from CoSiNe.community_detection.greedy_modularity import run_greedy_modularity
 from CoSiNe.community_detection.infomap import run_infomap
 from CoSiNe.community_detection.leiden import run_leiden
 from CoSiNe.community_detection.louvain import run_louvain
 from CoSiNe.community_detection.louvain_signed import run_louvain_signed
-from CoSiNe.community_detection.greedy_modularity import run_greedy_modularity
 from CoSiNe.community_detection.spectral_clustering import run_spectral_clustering
+
 
 def get_ground_truth_communities(G):
     """
@@ -38,23 +39,33 @@ def get_ground_truth_communities(G):
 
 def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg):
     """
-    Run both signed and unsigned algorithms:
-      - 'LouvainSigned' uses G_pos + G_neg
-      - 'Louvain', 'Leiden', 'Infomap' use just G_pos
+    Run both signed and unsigned community detection algorithms:
+      - For LouvainSigned, we run multiple times with alpha values ranging from 0.1 to 1.0 (ascending).
+      - Other methods (Louvain, Leiden, Infomap, Greedy modularity, Spectral clustering)
+        use only the positive subgraph (G_pos).
     """
     print("🔹 Benchmarking started.")
 
-    methods = {
-        "LouvainSigned": (run_louvain_signed, "signed"),
-        "Louvain": (run_louvain, "pos"),
-        "Leiden": (run_leiden, "pos"),
-        "Infomap": (run_infomap, "pos"),
-        "Greedy modularity": (run_greedy_modularity, "pos"),
-        "Spectral clustering": (run_spectral_clustering, "pos")
-    }
+    methods = {}
+    # Add LouvainSigned runs in ascending order of alpha (0.1 to 1.0)
+    for alpha in [round(x * 0.1, 1) for x in range(1, 11)]:
+        method_name = f"LouvainSigned_a{alpha}"
+        # Use lambda with a default argument so that each alpha is captured correctly.
+        methods[method_name] = (
+            lambda G_pos, G_neg, alpha=alpha: run_louvain_signed(
+                G_pos, G_neg, alpha=alpha, resolution=1.0
+            ),
+            "signed",
+        )
 
-    # We'll always use ground truth from the same place (both graphs
-    # have the same node attributes). G_signed or G_pos will do.
+    # Add the remaining unsigned methods
+    methods["Louvain"] = (run_louvain, "pos")
+    methods["Leiden"] = (run_leiden, "pos")
+    methods["Infomap"] = (run_infomap, "pos")
+    methods["Greedy modularity"] = (run_greedy_modularity, "pos")
+    methods["Spectral clustering"] = (run_spectral_clustering, "pos")
+
+    # Use ground truth from G_signed (both graphs have the same node 'community' attributes)
     ground_truth = get_ground_truth_communities(G_signed)
 
     results = []
@@ -63,26 +74,23 @@ def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg):
         start_time = time.time()
 
         if graph_type == "signed":
-            # 'run_louvain_signed' typically wants G_pos and G_neg as TWO arguments
+            # Pass both positive and negative graphs for signed algorithms
             communities = func(G_pos, G_neg)
-            # For consistent node ordering, let’s use the same node list as G_signed
             node_list = sorted(G_signed.nodes())
         else:
-            # 'run_louvain', 'run_leiden', 'run_infomap' want a single graph => G_pos
+            # Unsigned methods get only the positive subgraph
             communities = func(G_pos)
-            # We'll use G_pos's node ordering (which should match G_signed anyway)
             node_list = sorted(G_pos.nodes())
 
         execution_time = time.time() - start_time
 
-        # Convert the returned partition to a list aligned with node ordering
+        # Convert returned partition to a list ordered by node
         if isinstance(communities, dict):
             predicted = [communities[node] for node in node_list]
         else:
-            # If it's already a list or similar structure
             predicted = communities
 
-        # Compute NMI, ARI
+        # Compute evaluation metrics
         nmi = normalized_mutual_info_score(ground_truth, predicted)
         ari = adjusted_rand_score(ground_truth, predicted)
         num_communities = len(set(predicted))
@@ -116,7 +124,7 @@ def generate_signed_LFR_benchmark_graph():
     tau1 = 3
     tau2 = 1.5
     mu = 0.1
-    P_minus = 0.1
+    P_minus = 0.5
     P_plus = 0.8
     min_community = 20
     average_degree = 5
