@@ -1,16 +1,16 @@
 Method,Graph Used,Execution Time (s),Number of Communities,NMI,ARI
-LouvainSigned_a0.1,signed,0.009,37,0.311,0.033
-LouvainSigned_a0.2,signed,0.009,42,0.356,0.073
-LouvainSigned_a0.3,signed,0.011,10,0.56,0.296
-LouvainSigned_a0.4,signed,0.012,8,0.588,0.362
-LouvainSigned_a0.5,signed,0.01,8,0.58,0.325
-LouvainSigned_a0.6,signed,0.01,7,0.646,0.39
-LouvainSigned_a0.7,signed,0.022,8,0.62,0.387
-LouvainSigned_a0.8,signed,0.014,7,0.56,0.348
-LouvainSigned_a0.9,signed,0.01,10,0.552,0.31
-LouvainSigned_a1.0,signed,0.009,8,0.634,0.392
-Louvain,pos,0.009,9,0.539,0.307
-Leiden,pos,0.008,8,0.589,0.354
-Infomap,pos,0.005,2,0.642,0.669
-Greedy modularity,pos,0.029,7,0.651,0.399
-Spectral clustering,pos,0.028,2,0.462,0.276
+LouvainSigned_a0.1,signed,0.01,17,0.428,0.133
+LouvainSigned_a0.2,signed,0.009,11,0.411,0.153
+LouvainSigned_a0.3,signed,0.008,43,0.353,0.065
+LouvainSigned_a0.4,signed,0.01,8,0.561,0.306
+LouvainSigned_a0.5,signed,0.009,8,0.587,0.341
+LouvainSigned_a0.6,signed,0.01,8,0.588,0.354
+LouvainSigned_a0.7,signed,0.009,7,0.648,0.394
+LouvainSigned_a0.8,signed,0.01,8,0.623,0.382
+LouvainSigned_a0.9,signed,0.009,8,0.624,0.392
+LouvainSigned_a1.0,signed,0.009,9,0.563,0.359
+Louvain,pos,0.009,7,0.605,0.391
+Leiden,pos,0.008,250,0.269,0.0
+Infomap,pos,0.006,2,0.642,0.669
+Greedy modularity,pos,0.027,7,0.651,0.399
+Spectral clustering,pos,0.062,2,0.462,0.276
