@@ -37,60 +37,78 @@ def get_ground_truth_communities(G):
     return ground_truth
 
 
-def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg):
+def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg, resolution=1.0):
     """
     Run both signed and unsigned community detection algorithms:
-      - For LouvainSigned, we run multiple times with alpha values ranging from 0.1 to 1.0 (ascending).
-      - Other methods (Louvain, Leiden, Infomap, Greedy modularity, Spectral clustering)
-        use only the positive subgraph (G_pos).
+      - For LouvainSigned, we run multiple times with alpha values ranging from 0.1 to 1.0 (ascending)
+        and pass the given resolution.
+      - Other methods (Louvain, Leiden) receive the resolution parameter.
+      - Infomap, Greedy modularity, and Spectral clustering are run on G_pos without a resolution parameter.
+
+    Parameters:
+        G_signed (networkx.Graph): The full signed graph (for ground truth extraction).
+        G_pos (networkx.Graph): Positive-only subgraph.
+        G_neg (networkx.Graph): Negative-only subgraph.
+        resolution (float): Resolution parameter for methods that support it.
+
+    Returns:
+        list of dict: Benchmark results.
     """
     print("🔹 Benchmarking started.")
 
     methods = {}
-    # Add LouvainSigned runs in ascending order of alpha (0.1 to 1.0)
+    # Add LouvainSigned runs (these methods require two graphs, and support resolution).
     for alpha in [round(x * 0.1, 1) for x in range(1, 11)]:
         method_name = f"LouvainSigned_a{alpha}"
-        # Use lambda with a default argument so that each alpha is captured correctly.
+        # Use lambda with default arguments so each alpha is captured correctly.
         methods[method_name] = (
-            lambda G_pos, G_neg, alpha=alpha: run_louvain_signed(
-                G_pos, G_neg, alpha=alpha, resolution=1.0
+            lambda G_pos, G_neg, alpha=alpha, resolution=resolution: run_louvain_signed(
+                G_pos, G_neg, alpha=alpha, resolution=resolution
             ),
             "signed",
         )
 
-    # Add the remaining unsigned methods
-    methods["Louvain"] = (run_louvain, "pos")
-    methods["Leiden"] = (run_leiden, "pos")
+    # For unsigned methods that support resolution, pass it via a lambda.
+    methods["Louvain"] = (
+        lambda G_pos, resolution=resolution: run_louvain(G_pos, resolution=resolution),
+        "pos",
+    )
+    methods["Leiden"] = (
+        lambda G_pos, resolution=resolution: run_leiden(G_pos, resolution=resolution),
+        "pos",
+    )
+
+    # For methods that do not accept a resolution parameter, call them directly.
     methods["Infomap"] = (run_infomap, "pos")
     methods["Greedy modularity"] = (run_greedy_modularity, "pos")
     methods["Spectral clustering"] = (run_spectral_clustering, "pos")
 
-    # Use ground truth from G_signed (both graphs have the same node 'community' attributes)
+    # Use ground truth from G_signed (nodes in both graphs share the same 'community' attribute)
     ground_truth = get_ground_truth_communities(G_signed)
 
     results = []
-
     for method_name, (func, graph_type) in methods.items():
         start_time = time.time()
 
         if graph_type == "signed":
-            # Pass both positive and negative graphs for signed algorithms
+            # For signed methods, pass both positive and negative graphs.
             communities = func(G_pos, G_neg)
+            # Use node ordering from G_signed for consistency.
             node_list = sorted(G_signed.nodes())
         else:
-            # Unsigned methods get only the positive subgraph
+            # For unsigned methods, pass only the positive subgraph.
             communities = func(G_pos)
             node_list = sorted(G_pos.nodes())
 
         execution_time = time.time() - start_time
 
-        # Convert returned partition to a list ordered by node
+        # Convert the returned partition to a list ordered by node.
         if isinstance(communities, dict):
             predicted = [communities[node] for node in node_list]
         else:
             predicted = communities
 
-        # Compute evaluation metrics
+        # Compute evaluation metrics.
         nmi = normalized_mutual_info_score(ground_truth, predicted)
         ari = adjusted_rand_score(ground_truth, predicted)
         num_communities = len(set(predicted))
