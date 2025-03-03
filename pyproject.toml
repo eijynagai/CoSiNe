@@ -16,6 +16,8 @@ leidenalg = "^0.10.2"
 infomap = "^2.8.0"
 matplotlib = "^3.10.0"
 scikit-learn = "^1.6.1"
+seaborn = "^0.13.2"
+palettable = "^3.3.3"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
