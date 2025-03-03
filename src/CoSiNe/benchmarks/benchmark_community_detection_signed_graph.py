@@ -201,12 +201,11 @@ def generate_signed_LFR_benchmark_graph():
     return G_signed, G_pos, G_neg
 
 
-def save_results_to_csv(results, filename="results/benchmark_results.csv"):
+def save_results_to_csv(results, filename=None):
     import os
 
     os.makedirs("results", exist_ok=True)
 
-    # Decide on columns
     fieldnames = [
         "Method",
         "Graph Used",
@@ -229,23 +228,31 @@ if __name__ == "__main__":
     print("🔹 Running full benchmark pipeline...")
 
     start_time = time.time()
-    G_signed, G_pos, G_neg = generate_signed_LFR_benchmark_graph()
-    if G_signed is None:
+    graphs = generate_signed_LFR_benchmark_graph()
+    if graphs is None:
         print("❌ LFR Graph Generation Failed. Exiting...")
         import sys
 
-        sys.exit(1)  # Stop if generation fails
+        sys.exit(1)
+    G_signed, G_pos, G_neg = graphs
 
     print(
         f"✅ Graph Ready: {G_signed.number_of_nodes()} nodes, {G_signed.number_of_edges()} edges."
     )
     print(f"🔹 LFR Graph Generation Time: {time.time() - start_time:.2f} sec")
 
-    start_time = time.time()
-    results = benchmark_signed_and_unsigned(G_signed, G_pos, G_neg)
-    print(f"🔹 Community Detection Time: {time.time() - start_time:.2f} sec")
+    # Define a list of resolutions to test.
+    resolution_values = [0.5, 0.75, 1.0, 1.25, 1.5]
 
-    print("✅ Benchmarking complete:", results)
+    for res in resolution_values:
+        print(f"🔹 Running benchmark for resolution = {res}...")
+        res_start = time.time()
+        results = benchmark_signed_and_unsigned(G_signed, G_pos, G_neg, resolution=res)
+        exec_time = time.time() - res_start
+        print(f"🔹 Benchmark for resolution = {res} finished in {exec_time:.2f} sec.")
 
-    # Save results to CSV
-    save_results_to_csv(results)
+        # Save results to CSV with the resolution in the filename.
+        filename = f"results/benchmark_results_res_{res}.csv"
+        save_results_to_csv(results, filename=filename)
+
+    print("✅ All benchmarks complete.")
