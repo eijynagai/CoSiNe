@@ -176,29 +176,23 @@ def benchmark(G_signed, G_pos, G_neg, resolution=1.0, n_runs=20):
     return raw_results, agg_results
 
 
-def generate_signed_LFR_benchmark_graph():
-    """Generate an LFR benchmark graph with debug prints."""
-    print("🔹 Starting LFR graph generation...")
+import time
 
-    # Parameters
-    n = 250
-    tau1 = 3
-    tau2 = 1.5
-    mu = 0.1
-    P_minus = 0.5
-    P_plus = 0.8
-    min_community = 20
-    average_degree = 5
-    seed = 10
+import networkx as nx
 
+from CoSiNe.community_detection.external.signedLFR import signed_LFR_benchmark_graph
+
+
+def generate_signed_LFR_benchmark_graph(
+    n, tau1, tau2, mu, P_minus, P_plus, min_community, average_degree, seed
+):
+    """Generate an LFR benchmark graph and its positive/negative subgraphs using provided parameters."""
+    print("🔹 Starting LFR graph generation with parameters:")
     print(
-        f"🔹 Parameters: n={n}, tau1={tau1}, tau2={tau2}, mu={mu}, "
-        f"p_minus={P_minus}, p_plus={P_plus}, min_community={min_community}, av_degree={average_degree}"
+        f"n={n}, tau1={tau1}, tau2={tau2}, mu={mu}, P_minus={P_minus}, P_plus={P_plus}, min_comm={min_community}, avg_deg={average_degree}, seed={seed}"
     )
-
     start_time = time.time()
     try:
-        print("🔹 Generating signed LFR graph...")
         G_signed = signed_LFR_benchmark_graph(
             n=n,
             tau1=tau1,
@@ -210,7 +204,7 @@ def generate_signed_LFR_benchmark_graph():
             min_community=min_community,
             seed=seed,
         )
-        print(f"✅ LFR Graph generated in {time.time() - start_time:.2f} seconds")
+        print(f"✅ LFR Graph generated in {time.time()-start_time:.2f} sec")
     except nx.exception.ExceededMaxIterations:
         print("❌ LFR Generation failed due to max iterations.")
         return None
@@ -298,19 +292,19 @@ import seaborn as sns
 from palettable.colorbrewer.qualitative import Set1_9  # example palette
 
 
-def save_boxplots_for_metrics_by_resolution(
-    resolution, metrics, raw_dir="results", output_dir="plots"
-):
+def save_boxplots_for_metrics_by_resolution(resolution, metrics, raw_dir, output_dir):
     """
-    For a given resolution, read the corresponding raw CSV file (e.g.,
-    'results/benchmark_raw_res_{resolution}.csv') and create & save a boxplot
-    for each metric. The output files include the resolution in their filenames.
+    For a given resolution, read the corresponding raw CSV file from raw_dir
+    (e.g., 'raw_dir/benchmark_raw_res_{resolution}.csv') and create & save a boxplot
+    for each metric. The output files are saved in the same directory (output_dir),
+    which should be the subdirectory where you also store the CSV tables.
 
     Parameters:
       resolution (float): The resolution value (used to build the filename).
-      metrics (list of str): List of metric column names to plot (e.g., ["NMI", "ARI", "Number of Communities", "Execution Time (s)"]).
+      metrics (list of str): List of metric column names to plot (e.g.,
+                             ["NMI", "ARI", "Number of Communities", "Execution Time (s)"]).
       raw_dir (str): Directory where the raw CSV file is stored.
-      output_dir (str): Directory to save the plots.
+      output_dir (str): Directory where the plots will be saved.
     """
     raw_filename = os.path.join(raw_dir, f"benchmark_raw_res_{resolution}.csv")
     if not os.path.exists(raw_filename):
