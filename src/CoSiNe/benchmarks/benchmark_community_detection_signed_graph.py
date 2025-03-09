@@ -4,6 +4,7 @@ import time
 import networkx as nx
 import numpy as np
 from sklearn.metrics.cluster import adjusted_rand_score, normalized_mutual_info_score
+from sklearn.metrics import f1_score
 
 from CoSiNe.community_detection.external.signedLFR import signed_LFR_benchmark_graph
 from CoSiNe.community_detection.greedy_modularity import run_greedy_modularity
@@ -90,6 +91,7 @@ def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg, resolution=1.0):
 
         nmi = normalized_mutual_info_score(ground_truth, predicted)
         ari = adjusted_rand_score(ground_truth, predicted)
+        f1 = f1_score(ground_truth, predicted, average='macro')
         num_communities = len(set(predicted))
 
         print(
@@ -106,6 +108,7 @@ def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg, resolution=1.0):
                 "Number of Communities": num_communities,
                 "NMI": round(nmi, 3),
                 "ARI": round(ari, 3),
+                "F1": round(f1, 3),
             }
         )
 
@@ -142,11 +145,13 @@ def benchmark(G_signed, G_pos, G_neg, resolution=1.0, n_runs=20):
                 "Number of Communities": [],
                 "NMI": [],
                 "ARI": [],
+                "F1": [],
             }
         aggregated[method]["Execution Time (s)"].append(row["Execution Time (s)"])
         aggregated[method]["Number of Communities"].append(row["Number of Communities"])
         aggregated[method]["NMI"].append(row["NMI"])
         aggregated[method]["ARI"].append(row["ARI"])
+        aggregated[method]["F1"].append(row["F1"])
 
     agg_results = []
     for method, metrics in aggregated.items():
@@ -171,6 +176,8 @@ def benchmark(G_signed, G_pos, G_neg, resolution=1.0, n_runs=20):
                 "NMI Std": round(np.std(metrics["NMI"]), 3),
                 "ARI Avg": round(np.mean(metrics["ARI"]), 3),
                 "ARI Std": round(np.std(metrics["ARI"]), 3),
+                "F1 Avg": round(np.mean(metrics["F1"]), 3),
+                "F1 Std": round(np.std(metrics["F1"]), 3),
             }
         )
     return raw_results, agg_results
@@ -245,6 +252,7 @@ def save_raw_results_to_csv(raw_results, filename):
         "Number of Communities",
         "NMI",
         "ARI",
+        "F1",
     ]
     with open(filename, mode="w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -273,6 +281,8 @@ def save_aggregated_results_to_csv(agg_results, filename):
         "NMI Std",
         "ARI Avg",
         "ARI Std",
+        "F1 Avg",
+        "F1 Std",
     ]
     with open(filename, mode="w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -377,7 +387,7 @@ if __name__ == "__main__":
     print("✅ All benchmarks complete.")
 
     # Plotting
-    metrics_to_plot = ["NMI", "ARI", "Number of Communities", "Execution Time (s)"]
+    metrics_to_plot = ["NMI", "ARI", "F1", "Number of Communities", "Execution Time (s)"]
 
     for res in resolution_values:
         save_boxplots_for_metrics_by_resolution(
