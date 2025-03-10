@@ -3,8 +3,8 @@ import time
 
 import networkx as nx
 import numpy as np
-from sklearn.metrics.cluster import adjusted_rand_score, normalized_mutual_info_score
 from sklearn.metrics import f1_score
+from sklearn.metrics.cluster import adjusted_rand_score, normalized_mutual_info_score
 
 from CoSiNe.community_detection.external.signedLFR import signed_LFR_benchmark_graph
 from CoSiNe.community_detection.greedy_modularity import run_greedy_modularity
@@ -91,7 +91,7 @@ def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg, resolution=1.0):
 
         nmi = normalized_mutual_info_score(ground_truth, predicted)
         ari = adjusted_rand_score(ground_truth, predicted)
-        f1 = f1_score(ground_truth, predicted, average='macro')
+        f1 = f1_score(ground_truth, predicted, average="macro")
         num_communities = len(set(predicted))
 
         print(
@@ -387,7 +387,13 @@ if __name__ == "__main__":
     print("✅ All benchmarks complete.")
 
     # Plotting
-    metrics_to_plot = ["NMI", "ARI", "F1", "Number of Communities", "Execution Time (s)"]
+    metrics_to_plot = [
+        "NMI",
+        "ARI",
+        "F1",
+        "Number of Communities",
+        "Execution Time (s)",
+    ]
 
     for res in resolution_values:
         save_boxplots_for_metrics_by_resolution(

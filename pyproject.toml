@@ -18,6 +18,7 @@ matplotlib = "^3.10.0"
 scikit-learn = "^1.6.1"
 seaborn = "^0.13.2"
 palettable = "^3.3.3"
+powerlaw = "^1.5"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -31,6 +32,7 @@ mypy = "^1.15.0"
 pytest = "^8.3.4"
 pytest-cov = "^6.0.0"
 pre-commit = "^4.1.0"
+ipykernel = "^6.29.5"
 
 [tool.black]
 line-length = 88
