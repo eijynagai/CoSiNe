@@ -1,0 +1,3 @@
+n,tau1,tau2,mu,P_minus,P_plus,min_community,average_degree,seed,resolution,n_runs,max_iters
+5408,3.3260728707219354,2.357979473397017,0.19769629556720184,0.2,0.5,20,335.421,10,1.0,20,100000
+# didn't work
