@@ -1,0 +1,346 @@
+setting... -N 5408
+setting... -k 335.42085798816566
+setting... -maxk 1000
+setting... -mu 0.19769629556720184
+setting... -maxc 1000
+setting... -minc 20
+setting... -t1 3.3260728707219354
+setting... -t2 2.357979473397017
+
+**************************************************************
+number of nodes:	5408
+average degree:	335.421
+maximum degree:	1000
+exponent for the degree distribution:	3.32607
+exponent for the community size distribution:	2.35798
+mixing parameter:	0.197696
+number of overlapping nodes:	0
+number of memberships of the overlapping nodes:	0
+community size range set equal to [20 , 1000]
+**************************************************************
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+84 119 27 38 23 22 25 43 37 32 22 22 97 39 31 34 135 51 28 49 25 28 282 33 221 22 29 21 381 72 26 62 30 25 20 28 75 36 21 27 20 37 161 25 20 57 25 21 60 26 64 39 35 352 38 20 22 22 512 21 31 76 35 43 22 30 86 57 21 36 104 34 96 24 20 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+119 27 38 23 22 25 43 37 32 22 22 97 39 31 34 135 51 28 49 25 28 282 33 221 22 29 21 381 72 26 62 30 25 20 28 75 36 21 27 20 37 161 25 20 57 25 21 60 26 64 39 35 352 38 20 22 22 512 21 31 76 35 43 22 30 86 57 84 36 104 34 96 24 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+27 38 23 22 25 43 37 32 22 22 97 39 31 34 135 51 28 49 25 28 282 33 221 22 29 21 381 72 26 62 30 25 20 28 75 36 21 27 20 37 161 25 20 57 25 21 60 26 64 39 35 352 38 41 22 22 512 119 31 76 35 43 22 30 86 57 84 36 104 34 96 24 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+38 23 22 25 43 37 32 22 22 97 39 31 34 135 51 28 49 25 28 282 33 221 22 29 21 381 72 26 62 30 25 20 28 75 36 21 27 20 37 161 25 41 57 25 27 60 26 64 39 35 352 38 41 22 22 512 119 31 76 35 43 22 30 86 57 84 36 104 34 96 24 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+23 22 25 43 37 32 22 22 97 39 31 34 135 51 28 49 25 28 282 33 221 22 29 21 381 72 26 62 30 25 20 28 75 36 38 27 41 37 161 25 41 57 25 27 60 26 64 39 35 352 38 41 22 22 512 119 31 76 35 43 22 30 86 57 84 36 104 34 96 24 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+22 25 43 37 32 22 22 97 39 31 34 135 51 28 49 25 28 282 33 221 22 29 23 381 72 26 62 30 25 41 28 75 36 38 27 41 37 161 25 41 57 25 27 60 26 64 39 35 352 38 41 22 22 512 119 31 76 35 43 22 30 86 57 84 36 104 34 96 24 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+25 43 37 32 22 22 97 39 31 34 135 51 28 49 25 28 282 33 221 22 29 23 381 72 26 62 30 25 41 28 75 36 38 27 41 37 161 25 41 57 25 27 60 26 64 39 35 352 38 41 22 22 512 119 31 76 35 43 44 30 86 57 84 36 104 34 96 24 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+43 37 32 22 22 97 39 31 34 135 51 28 49 25 28 282 33 221 22 29 25 381 72 26 62 30 25 41 28 75 36 38 27 41 37 161 25 41 57 25 27 60 26 64 39 35 352 38 41 22 45 512 119 31 76 35 43 44 30 86 57 84 36 104 34 96 24 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+37 32 22 22 97 39 31 34 135 51 28 49 25 28 282 33 221 22 29 25 381 72 26 62 30 25 41 28 75 36 38 27 41 37 161 25 41 57 25 27 60 26 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 30 86 57 84 36 104 34 96 43 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+32 22 22 97 39 31 34 135 51 28 49 25 28 282 33 221 47 29 25 381 72 26 62 30 25 41 28 75 36 38 27 41 37 161 25 41 57 37 27 60 26 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 30 86 57 84 36 104 34 96 43 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+22 47 97 39 31 34 135 51 28 49 25 28 282 33 221 47 29 25 381 72 26 62 30 25 41 28 75 36 38 27 41 37 161 32 41 57 37 27 60 26 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 30 86 57 84 36 104 34 96 43 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+47 97 39 31 34 135 51 28 49 25 28 282 33 221 47 29 25 381 72 26 62 30 47 41 28 75 36 38 27 41 37 161 32 41 57 37 27 60 26 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 30 86 57 84 36 104 34 96 43 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+97 39 31 34 135 51 28 49 25 28 282 33 221 47 29 51 381 72 26 62 30 47 41 28 75 36 38 27 41 37 161 32 41 57 37 27 60 47 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 30 86 57 84 36 104 34 96 43 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+39 31 34 135 51 28 49 51 28 282 33 221 47 29 51 381 72 97 62 30 47 41 28 75 36 38 27 41 37 161 32 41 57 37 27 60 47 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 30 86 57 84 36 104 34 96 43 41 382 32 28 34 31 41 28 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+31 34 135 51 28 49 51 28 282 33 221 47 29 51 381 72 97 62 30 47 41 28 75 36 38 27 41 37 161 32 41 57 37 55 60 47 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 30 86 57 84 36 104 34 96 43 41 382 32 28 34 31 41 39 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+34 135 51 28 49 51 28 282 33 221 47 29 51 381 72 97 62 30 47 41 28 75 36 38 55 41 37 161 32 41 57 37 55 60 47 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 30 86 57 84 36 104 34 96 43 41 382 32 31 34 31 41 39 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+135 51 28 49 51 28 282 33 221 47 34 51 381 72 97 62 30 47 41 57 75 36 38 55 41 37 161 32 41 57 37 55 60 47 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 30 86 57 84 36 104 34 96 43 41 382 32 31 34 31 41 39 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+51 28 49 51 58 282 33 221 47 34 51 381 72 97 62 30 47 41 57 75 36 38 55 41 37 161 32 41 57 37 55 60 47 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 135 86 57 84 36 104 34 96 43 41 382 32 31 34 31 41 39 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+58 49 51 58 282 33 221 47 34 51 381 72 97 62 51 47 41 57 75 36 38 55 41 37 161 32 41 57 37 55 60 47 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 135 86 57 84 36 104 34 96 43 41 382 32 31 34 31 41 39 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+49 51 58 282 33 221 47 34 51 381 72 97 62 51 47 41 57 75 36 38 55 41 37 161 32 41 57 37 55 60 47 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 135 86 57 84 36 104 34 96 43 41 382 58 31 34 63 41 39 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+51 58 282 33 221 47 34 51 381 72 97 62 51 47 41 57 75 36 38 55 41 37 161 49 41 57 37 55 60 47 64 39 35 352 38 41 46 45 512 119 31 76 35 43 44 135 86 57 84 36 104 34 96 43 41 382 58 63 34 63 41 39 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+58 282 51 221 47 34 51 381 72 97 62 51 47 41 57 75 36 38 55 41 37 161 49 41 57 37 55 60 47 64 39 35 352 38 41 46 45 512 119 64 76 35 43 44 135 86 57 84 36 104 34 96 43 41 382 58 63 34 63 41 39 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+282 51 221 47 34 51 381 72 97 62 51 47 41 57 75 36 38 55 41 37 161 49 41 57 37 55 60 47 64 39 35 352 38 41 46 45 512 119 64 76 58 43 44 135 86 57 84 36 104 34 96 43 41 382 58 63 69 63 41 39 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+51 221 47 34 51 381 72 97 62 51 47 41 57 75 36 38 55 41 37 161 49 41 57 37 55 60 47 64 39 282 352 38 41 46 45 512 119 64 76 58 43 44 135 86 57 84 36 104 69 96 43 41 382 58 63 69 63 41 39 36 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+221 47 70 51 381 72 97 62 51 47 41 57 75 36 38 55 41 37 161 49 41 57 37 55 60 47 64 39 282 352 38 41 46 45 512 119 64 76 58 43 44 135 86 57 84 36 104 69 96 43 41 382 58 63 69 63 41 39 51 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+47 70 51 381 72 97 62 51 47 41 57 75 36 38 55 41 37 161 49 41 57 221 55 60 47 64 39 282 352 38 41 46 45 512 119 64 76 58 43 44 135 86 57 84 73 104 69 96 43 41 382 58 63 69 63 41 39 51 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+70 51 381 72 97 62 51 47 41 57 75 73 38 55 41 47 161 49 41 57 221 55 60 47 64 39 282 352 38 41 46 45 512 119 64 76 58 43 44 135 86 57 84 73 104 69 96 43 41 382 58 63 69 63 41 39 51 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+51 381 72 97 62 51 47 41 57 75 73 38 55 41 47 161 49 41 57 221 55 60 47 64 39 282 352 77 41 46 45 512 119 64 76 58 43 44 135 86 57 84 73 104 69 96 43 41 382 58 63 69 63 41 70 51 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+381 72 97 62 51 47 41 57 75 73 77 55 41 47 161 49 41 57 221 55 60 47 64 51 282 352 77 41 46 45 512 119 64 76 58 43 44 135 86 57 84 73 104 69 96 43 41 382 58 63 69 63 41 70 51 41 41 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+72 97 62 51 47 41 57 75 73 77 55 41 47 161 49 41 57 221 55 60 47 64 51 282 352 77 41 46 45 512 119 64 76 58 43 44 135 86 57 84 73 104 69 96 381 41 382 58 63 69 63 41 70 51 41 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+97 62 51 47 41 57 75 73 77 55 41 47 161 49 41 57 221 55 60 47 64 51 282 352 77 41 46 45 512 119 64 76 58 72 44 135 86 57 84 73 104 69 96 381 41 382 58 63 69 63 41 70 51 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+62 51 47 41 57 75 73 77 55 41 47 161 49 41 57 221 55 60 47 64 51 282 352 77 41 46 45 512 119 64 76 58 72 97 135 86 57 84 73 104 69 96 381 41 382 58 63 69 63 85 70 51 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+51 47 41 57 75 73 77 55 41 47 161 49 41 57 221 55 60 47 64 51 282 352 77 41 46 62 512 119 64 76 58 72 97 135 86 57 84 73 104 69 96 381 86 382 58 63 69 63 85 70 51 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+47 41 57 75 73 77 55 41 47 161 49 41 57 221 55 60 47 64 51 282 352 77 87 51 62 512 119 64 76 58 72 97 135 86 57 84 73 104 69 96 381 86 382 58 63 69 63 85 70 51 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+41 57 75 73 77 55 41 47 161 49 88 57 221 55 60 47 64 51 282 352 77 87 51 62 512 119 64 76 58 72 97 135 86 57 84 73 104 69 96 381 86 382 58 63 69 63 85 70 51 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+57 75 73 77 55 82 47 161 49 88 57 221 55 60 47 64 51 282 352 77 87 51 62 512 119 64 76 58 72 97 135 86 57 84 73 104 69 96 381 86 382 58 63 69 63 85 70 51 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+75 73 77 55 82 47 161 57 88 57 221 55 60 96 64 51 282 352 77 87 51 62 512 119 64 76 58 72 97 135 86 57 84 73 104 69 96 381 86 382 58 63 69 63 85 70 51 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+73 77 55 82 98 161 57 88 57 221 55 60 96 64 51 282 352 77 87 51 62 512 119 64 76 58 72 97 135 86 57 84 73 104 69 96 381 86 382 58 63 69 63 85 70 75 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+77 55 82 98 161 57 88 57 221 73 60 96 64 51 282 352 77 87 106 62 512 119 64 76 58 72 97 135 86 57 84 73 104 69 96 381 86 382 58 63 69 63 85 70 75 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+77 82 98 161 57 88 57 221 73 60 96 64 106 282 352 77 87 106 62 512 119 64 76 58 72 97 135 86 57 84 73 104 69 96 381 86 382 58 63 69 63 85 70 75 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+82 98 161 57 88 57 221 73 60 96 64 106 282 352 77 87 106 62 512 119 64 76 58 72 97 135 86 115 84 73 104 69 96 381 86 382 77 63 69 63 85 70 75 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+98 161 57 88 115 221 73 60 96 64 106 282 352 77 87 106 62 512 119 64 76 82 72 97 135 86 115 84 73 104 69 96 381 86 382 77 63 69 63 85 70 75 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+161 117 88 115 221 73 98 96 64 106 282 352 77 87 106 62 512 119 64 76 82 72 97 135 86 115 84 73 104 69 96 381 86 382 77 63 69 63 85 70 75 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+117 88 115 221 73 98 96 64 106 282 352 77 87 106 125 512 119 64 76 82 72 97 135 86 115 84 73 104 69 96 381 86 382 77 63 69 161 85 70 75 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+88 115 221 73 98 96 64 106 282 352 77 87 106 125 512 119 117 76 82 72 97 135 86 115 84 73 104 69 96 381 86 382 77 127 69 161 85 70 75 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+115 221 73 98 96 133 106 282 352 77 87 106 125 512 119 117 76 82 72 97 135 86 115 84 73 104 69 96 381 86 382 77 127 88 161 85 70 75 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+221 73 98 96 133 106 282 352 77 87 106 125 512 119 117 76 82 72 97 135 86 115 84 73 104 139 96 381 86 382 77 127 88 161 85 115 75 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+73 98 96 133 106 282 352 77 87 106 125 512 119 117 76 82 145 97 135 86 115 84 221 104 139 96 381 86 382 77 127 88 161 85 115 75 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+98 96 133 106 282 352 77 87 106 125 512 119 117 76 82 145 97 135 86 115 84 221 104 139 96 381 86 382 77 127 88 161 85 115 148 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+96 133 106 282 352 77 87 106 125 512 119 117 153 82 145 97 135 86 115 84 221 104 139 96 381 86 382 98 127 88 161 85 115 148 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+133 106 282 352 159 87 106 125 512 119 117 153 96 145 97 135 86 115 84 221 104 139 96 381 86 382 98 127 88 161 85 115 148 84 84 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+106 282 352 159 87 106 125 512 119 117 153 96 145 97 135 86 115 84 221 104 139 96 381 86 382 98 127 88 161 133 115 148 84 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+282 352 159 87 106 125 512 119 117 153 96 145 97 135 86 115 84 221 104 139 96 381 106 382 98 127 88 161 133 115 148 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+352 159 87 106 125 512 119 117 153 96 145 97 135 282 115 170 221 104 139 96 381 106 382 98 127 88 161 133 115 148 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+159 175 106 125 512 119 117 153 96 145 97 135 282 115 170 221 104 139 96 381 106 382 98 127 352 161 133 115 148 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+175 106 125 512 119 117 153 96 145 159 135 282 115 170 221 104 139 193 381 106 382 98 127 352 161 133 115 148 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+106 125 512 119 117 153 194 145 159 135 282 115 170 221 104 139 193 381 106 382 175 127 352 161 133 115 148 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+125 512 119 117 153 194 145 159 135 282 115 170 221 210 139 193 381 106 382 175 127 352 161 133 115 148 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+512 119 117 153 194 145 159 135 282 115 170 221 210 139 193 381 221 382 175 127 352 161 133 125 148 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+119 512 153 194 145 159 135 282 232 170 221 210 139 193 381 221 382 175 127 352 161 133 125 148 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+512 153 194 145 159 135 282 232 170 221 210 139 193 381 221 382 175 127 352 161 133 244 148 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+153 194 145 159 135 282 232 170 221 210 139 193 381 221 382 175 260 352 161 512 244 148 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+194 145 159 274 282 232 170 221 210 153 193 381 221 382 175 260 352 161 512 244 148 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+293 159 274 282 232 170 221 210 153 193 381 221 382 175 260 352 161 512 244 194 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+293 274 282 232 170 221 210 312 193 381 221 382 175 260 352 161 512 244 194 170 169 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+274 282 232 170 221 210 312 193 381 221 382 175 260 352 330 512 244 194 170 293 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+282 232 170 221 210 312 193 381 221 382 274 260 352 330 512 244 194 345 293 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+232 363 221 210 312 282 381 221 382 274 260 352 330 512 244 194 345 293 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+363 221 232 312 282 381 221 382 274 260 352 330 512 244 404 345 293 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+221 363 312 282 381 453 382 274 260 352 330 512 244 404 345 293 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+363 312 282 381 453 382 274 260 352 330 512 465 404 345 293 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+312 282 381 453 382 363 534 352 330 512 465 404 345 293 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+575 381 453 382 363 534 352 330 512 465 404 345 312 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+381 453 382 363 534 352 575 512 465 404 345 642 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+453 382 363 534 381 575 512 465 404 697 642 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+382 744 534 453 575 512 465 404 697 642 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+744 534 453 575 512 465 786 697 642 
+
+it took too long to decide the memberships; I will try to change the community sizes
+new community sizes
+534 918 575 512 744 786 697 642 
+
+building communities... 
+connecting communities... 
+recording network...
+
+
+---------------------------------------------------------------------------
+network of 5408 vertices and 903722 edges;	 average degree = 334.217
+
+average mixing parameter: 0.197715 +/- 0.00144254
+p_in: 0.403575	p_out: 0.0138561
+
+
+/Users/eijynagai/Coding/CoSiNe/src/CoSiNe/synthetic_generation/binary_networks/lfr_mac -N 5408 -k 335.42085798816566 -maxk 1000 -mu 0.19769629556720184 -maxc 1000 -minc 20 -t1 3.3260728707219354 -t2 2.357979473397017
