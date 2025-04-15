@@ -3,7 +3,7 @@ import leidenalg as la
 import networkx as nx
 
 
-def run_leiden(G, partition_type=la.ModularityVertexPartition, resolution=1.0):
+def run_leiden(G, partition_type=la.RBConfigurationVertexPartition, resolution=1.0):
     """
     Runs the Leiden community detection algorithm on the positive graph G.
 
@@ -11,7 +11,7 @@ def run_leiden(G, partition_type=la.ModularityVertexPartition, resolution=1.0):
 
     Parameters:
       G (networkx.Graph): Input positive graph.
-      partition_type: Type of partitioning (default: la.ModularityVertexPartition).
+      partition_type: Type of partitioning (default: RBConfigurationVertexPartition for resolution adjustments).
       resolution (float): Resolution parameter.
 
     Returns:
@@ -28,15 +28,25 @@ def run_leiden(G, partition_type=la.ModularityVertexPartition, resolution=1.0):
     if "weight" not in G_ig.edge_attributes():
         G_ig.es["weight"] = 1
 
-    # Attempt to run Leiden with resolution.
+    # Determine if the partition type accepts a resolution_parameter.
+    supports_resolution = (
+        "resolution_parameter" in partition_type.__init__.__code__.co_varnames
+    )
+
     try:
-        partition = la.find_partition(G_ig, partition_type, resolution=resolution)
+        if supports_resolution:
+            partition = la.find_partition(
+                G_ig, partition_type, resolution_parameter=resolution
+            )
+        else:
+            partition = la.find_partition(G_ig, partition_type)
     except Exception as e:
         print("Leiden partitioning with resolution failed, falling back. Error:", e)
         partition = la.find_partition(G_ig, partition_type)
 
-    # Map igraph vertex indices back to original node labels.
-    node_to_cluster = {v["name"]: partition.membership[v.index] for v in G_ig.vs}
+    node_to_cluster = {int(v["name"]): partition.membership[v.index] for v in G_ig.vs}
+    # print("igraph vertex names:", G_ig.vs["name"])
+    # print("Calculated membership:", partition.membership)
     return node_to_cluster
 
 
