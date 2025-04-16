@@ -3,4 +3,8 @@
 #tmux new-session -d -s "signedLFR" poetry run python -m  CoSiNe.benchmarks.run_pipeline
 
 # Run test 2: using list of params.csv 
-time poetry run python -m CoSiNe.benchmarks.run_pipeline
+#time poetry run python -m CoSiNe.benchmarks.run_pipeline
+
+
+# Run test 3: hyperparameter tunning
+time poetry run python -m benchmarks.hyperparam_tuning.tune_alpha_gamma_optuna

@@ -19,6 +19,7 @@ scikit-learn = "^1.6.1"
 seaborn = "^0.13.2"
 palettable = "^3.3.3"
 powerlaw = "^1.5"
+optuna = "^4.3.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
