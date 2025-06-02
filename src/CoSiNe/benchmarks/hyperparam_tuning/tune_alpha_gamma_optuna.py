@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 
 import optuna
@@ -7,13 +6,8 @@ from sklearn.metrics import normalized_mutual_info_score
 
 from CoSiNe.benchmarks.benchmark_community_detection_signed_graph import (
     generate_signed_LFR_benchmark_graph,
-    get_ground_truth_communities,
 )
-
-# If your script references community detection methods directly,
-# you might also import them from:
-# from CoSiNe.community_detection.louvain_signed import run_louvain_signed
-# ... etc.
+from CoSiNe.community_detection.louvain_signed import run_louvain_signed
 
 ###############################################################################
 # 1) CONFIGURE LOGGING (if you want logs in a file or console)
@@ -39,35 +33,27 @@ def run_detection_and_get_nmi(alpha, gamma):
       3. Compare predicted communities to ground-truth.
       4. Return the mean NMI as a float.
     """
-    # -------------------------------------------------------------------------
-    # EXAMPLE SKELETON (pseudocode)
-    # -------------------------------------------------------------------------
-
-    # Possibly generate an LFR graph (or multiple):
-    # G_signed, G_pos, G_neg = generate_signed_LFR_benchmark_graph(
-    #     n=250, tau1=3.0, tau2=1.5, mu=0.1,
-    #     P_minus=0.5, P_plus=0.8, min_community=20,
-    #     average_degree=5, seed=10
-    # )
-
-    # # Then run detection with alpha, gamma (e.g. "louvain_signed")
-    # # This is just an example if your code looks like run_louvain_signed(pos, neg, alpha=..., resolution=...)
-    # # or if you prefer a separate function that returns predicted communities:
-    # communities_dict = run_louvain_signed(G_pos, G_neg, alpha=alpha, resolution=gamma)
-
-    # # Convert that dictionary into a list of predicted labels
-    # node_list = sorted(G_signed.nodes())
-    # predicted = [communities_dict[node] for node in node_list]
-
-    # # Compare predicted to ground truth
-    # ground_truth = get_ground_truth_communities(G_signed)
-    # nmi = normalized_mutual_info_score(ground_truth, predicted)
-
-    # # If you want multiple runs or multiple graphs, average them:
-    # mean_nmi = nmi
-
-    # # Return the final float
-    return nmi
+    # Averaging Over Multiple Seeds
+    seeds = [42, 43, 44]
+    nmis = []
+    for seed in seeds:
+        G_signed, G_pos, G_neg = generate_signed_LFR_benchmark_graph(
+            n=1000,
+            tau1=3,
+            tau2=1.5,
+            mu=0.1,
+            P_minus=0.1,
+            P_plus=0.0,
+            min_community=20,
+            average_degree=6,
+            seed=seed,
+        )
+        communities = run_louvain_signed(G_pos, G_neg, alpha=alpha, resolution=gamma)
+        nodes = sorted(G_signed.nodes())
+        ground_truth = [G_signed.nodes[n]["community"] for n in nodes]
+        predicted = [communities[n] for n in nodes]
+        nmis.append(normalized_mutual_info_score(ground_truth, predicted))
+    return sum(nmis) / len(nmis)
 
 
 ###############################################################################

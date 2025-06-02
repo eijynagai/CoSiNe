@@ -7,4 +7,4 @@
 
 
 # Run test 3: hyperparameter tunning
-time poetry run python -m benchmarks.hyperparam_tuning.tune_alpha_gamma_optuna
+time poetry run python -m CoSiNe.benchmarks.hyperparam_tuning.tune_alpha_gamma_optuna
