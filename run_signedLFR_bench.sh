@@ -5,6 +5,8 @@
 # Run test 2: using list of params.csv 
 #time poetry run python -m CoSiNe.benchmarks.run_pipeline
 
+# Run test 3: hyperparameter tunning --> working
+#time poetry run python -m CoSiNe.benchmarks.hyperparam_tuning.tune_alpha_gamma_optuna
 
-# Run test 3: hyperparameter tunning
-time poetry run python -m CoSiNe.benchmarks.hyperparam_tuning.tune_alpha_gamma_optuna
+# Run method comparison
+time poetry run python compare_methods.py

@@ -1,12 +1,7 @@
 import logging
 import os
 import sys
-
 import pandas as pd
-
-# If you also have a plotting function, import that here:
-# Import benchmark and saving functions from your library code.
-# (We assume these come from "benchmark_community_detection_signed_graph.py" or similar.)
 from CoSiNe.benchmarks.benchmark_community_detection_signed_graph import (
     benchmark,
     generate_signed_LFR_benchmark_graph,
@@ -15,8 +10,7 @@ from CoSiNe.benchmarks.benchmark_community_detection_signed_graph import (
     save_raw_results_to_csv,
 )
 
-# Configure logging.
-logging.getLogger().handlers = []  # Clear any existing handlers.
+logging.getLogger().handlers = []
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -24,7 +18,6 @@ logging.basicConfig(
     filename="pipeline.log",
     filemode="w",
 )
-# Add a console handler if desired:
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
 formatter = logging.Formatter(
@@ -88,11 +81,11 @@ def run_pipeline_for_params(params, run_id, base_results_dir="results"):
     # 3. Determine how many runs & define the range of resolutions
     n_runs = params.get("n_runs", 20)
     # Example: you can store the resolution values in your params.csv OR define them here:
-    resolution_values = [0.5, 0.75, 1.0, 1.25, 1.5]
+    resolution_values = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 
     # 4. Loop over the resolution values
     for res in resolution_values:
-        logging.info(f"💠 Starting benchmark at resolution={res}, n_runs={n_runs}...")
+        logging.info(f"Starting benchmark at resolution={res}, n_runs={n_runs}...")
         try:
             raw_results, agg_results = benchmark(
                 G_signed, G_pos, G_neg, resolution=res, n_runs=n_runs
@@ -131,7 +124,7 @@ def run_pipeline_for_params(params, run_id, base_results_dir="results"):
             logging.error(f"Plotting failed for resolution={res}: {e}")
             # Not a critical failure, so continue
 
-    logging.info(f"✅ Pipeline for {subdir} finished.")
+    logging.info(f"Pipeline for {subdir} finished.\n")
 
 
 def main():
