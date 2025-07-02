@@ -48,7 +48,7 @@ def write_membership_list_to_file(file_name, membership):
 
 
 def compute_mixing_param(net, membership):
-    n = net.number_of_nodes()
+    # n = net.number_of_nodes()
     in_degree = defaultdict(int)
     out_degree = defaultdict(int)
     for n1, n2 in net.edges:

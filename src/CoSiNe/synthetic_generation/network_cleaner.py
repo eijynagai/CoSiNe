@@ -9,10 +9,10 @@ def clean_edgelist_csv(raw_file, cleaned_file, drop_first=0, sep=None):
     """
     node_map = defaultdict(lambda: len(node_map))
 
-    with open(raw_file, "r", encoding="utf-8") as rf, open(
-        cleaned_file, "w", encoding="utf-8", newline=""
-    ) as cf:
-
+    with (
+        open(raw_file, "r", encoding="utf-8") as rf,
+        open(cleaned_file, "w", encoding="utf-8", newline="") as cf,
+    ):
         # Skip the first `drop_first` lines (e.g., header lines)
         for _ in range(drop_first):
             next(rf, None)

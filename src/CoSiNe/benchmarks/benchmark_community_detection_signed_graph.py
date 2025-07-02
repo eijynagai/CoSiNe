@@ -3,13 +3,8 @@ import logging
 import os
 import time
 
-# Optional: For boxplots if needed within this file
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-import pandas as pd
-import seaborn as sns
-from palettable.colorbrewer.qualitative import Set1_9
 from sklearn.metrics import f1_score
 from sklearn.metrics.cluster import adjusted_rand_score, normalized_mutual_info_score
 
@@ -154,7 +149,7 @@ def benchmark(G_signed, G_pos, G_neg, resolution=1.0, n_runs=20):
     """
     raw_results = []
     for i in range(n_runs):
-        logging.info(f"Run {i+1}/{n_runs} at resolution={resolution}...")
+        logging.info(f"Run {i + 1}/{n_runs} at resolution={resolution}...")
         run_data = benchmark_signed_and_unsigned(
             G_signed, G_pos, G_neg, resolution=resolution
         )

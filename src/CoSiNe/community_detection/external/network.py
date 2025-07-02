@@ -264,7 +264,7 @@ def display_communities_by_name(graph, partition):
         community_dict[community].append(gene_name)
 
     for community, names in community_dict.items():
-        print(f'Community {community}: {" | ".join(set(names))}')
+        print(f"Community {community}: {' | '.join(set(names))}")
 
 
 def find_communities_of_genes(graph, partition, gene_names):

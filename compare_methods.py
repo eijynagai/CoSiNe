@@ -1,158 +1,149 @@
-import sys
+#!/usr/bin/env python
+import logging
 import os
-import json
-import time
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import sys
 
-sys.path.append(os.path.abspath("src"))
+import networkx as nx
+import numpy as np
+import pandas as pd
+from networkx.linalg.spectrum import laplacian_spectrum
+from tqdm import tqdm
+
 from CoSiNe.benchmarks.benchmark_community_detection_signed_graph import (
     generate_signed_LFR_benchmark_graph,
 )
-from CoSiNe.community_detection.louvain_signed import run_louvain_signed
-from CoSiNe.community_detection.louvain import run_louvain
-from CoSiNe.community_detection.leiden import run_leiden
-from CoSiNe.community_detection.greedy_modularity import run_greedy_modularity
-from CoSiNe.community_detection.spectral_clustering import run_spectral_clustering
 
-from sklearn.metrics.cluster import normalized_mutual_info_score, adjusted_rand_score
-from sklearn.metrics import f1_score
+sys.path.append(os.path.abspath("src"))
 
-###############################################################################
-# 1. Load best (alpha, gamma) from Optuna results
-################################################################################
-best_params_path = "src/CoSiNe/benchmarks/hyperparam_tuning/results/best_params_nmi.json"
-with open(best_params_path, "r") as f:
-    best = json.load(f)
-best_alpha = best["alpha"]
-best_gamma = best["gamma"]
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
-################################################################################ 2. Define the Methods for Comparison (Infomap removed)
-################################################################################
-methods = {
-    "LouvainSigned_default":  ("signed", {"alpha": 0.6, "resolution": 1.0}),
-    "LouvainSigned_best":     ("signed", {"alpha": best_alpha, "resolution": best_gamma}),
-    "Louvain":                ("pos",    {"resolution": 1.0}),
-    "Leiden":                 ("pos",    {"resolution": 1.0}),
-    "GreedyModularity":       ("pos",    {}),
-    "SpectralClustering":     ("pos",    {}),
-}
+# 1) Read scenarios
+scenarios = pd.read_csv("scenarios.csv", comment="#")
 
-################################################################################ 3. Choose a Set of Seeds
-###############################################################################
-# 3.1 Iterate over seeds
-seeds = [42, 43, 44]
-results = []
+records = []
+for _, row in tqdm(
+    scenarios.iterrows(), total=len(scenarios), desc="Profiling scenarios"
+):
+    scenario = row["scenario"]
+    # Generate the signed LFR graph; skip if it fails
+    res = generate_signed_LFR_benchmark_graph(
+        n=int(row["n"]),
+        tau1=float(row["tau1"]),
+        tau2=float(row["tau2"]),
+        mu=float(row["mu"]),
+        P_minus=float(row["P_minus"]),
+        P_plus=float(row["P_plus"]),
+        average_degree=float(row["average_degree"]),
+        min_community=int(row["min_community"]),
+        seed=0,
+    )
+    if res is None:
+        logging.warning(f"Scenario {scenario}: LFR generation failed, skipping.")
+        continue
+    G_signed, G_pos, G_neg = res
+    # Basic counts
+    n = G_signed.number_of_nodes()
+    m = G_signed.number_of_edges()
+    m_pos = G_pos.number_of_edges()
+    m_neg = G_neg.number_of_edges()
+    density = 2 * m / (n * (n - 1))
+    avg_deg = 2 * m / n
+    avg_deg_pos = 2 * m_pos / n
+    avg_deg_neg = 2 * m_neg / n
 
-for seed in seeds:
-    G_signed, G_pos, G_neg = generate_signed_LFR_benchmark_graph(
-        n=1000,          # ~1000 cells/nodes
-        tau1=3.0,          # power-law exponent for node degree (controls hub-iness)
-        tau2=1.5,        # power-law exponent for community sizes
-        mu=0.1667,          # 10% of each node’s edges go outside its “ground-truth” community
-        P_minus=0.1,     # 10% of inter-community links carry a negative weight
-        P_plus=0.01,     # 1% of same-community edges are flipped to negative
-        min_community=20,# allow small communities (nested)
-        average_degree=6,# ~6 edges/node on average
-        seed=seed,
+    # Planted communities
+    gt = nx.get_node_attributes(G_signed, "community")
+    inv: dict[int, list[int]] = {}
+    for u, c in gt.items():
+        inv.setdefault(c, []).append(u)
+    planted_sets = list(inv.values())
+    num_planted = len(planted_sets)
+    comm_sizes = [len(c) for c in planted_sets]
+    comm_size_mean = np.mean(comm_sizes)
+    comm_size_std = np.std(comm_sizes)
+
+    # Ground-truth modularity on positive backbone
+    modularity = nx.community.modularity(G_pos, planted_sets)
+
+    # Clustering & connectivity
+    avg_clust = nx.average_clustering(G_pos)
+    trans = nx.transitivity(G_pos)
+    num_cc = nx.number_connected_components(G_pos)
+    # Largest component stats
+    comps = list(nx.connected_components(G_pos))
+    largest = max(comps, key=len)
+    H = G_pos.subgraph(largest)
+    try:
+        diameter = nx.diameter(H)
+        avg_path = nx.average_shortest_path_length(H)
+    except nx.NetworkXError:
+        diameter = np.nan
+        avg_path = np.nan
+    assort = nx.degree_assortativity_coefficient(G_pos)
+
+    # Spectral gaps
+    # 1) Unsigned Laplacian (Fiedler gap)
+    eigs = laplacian_spectrum(G_pos)
+    eigs_sorted = sorted(eigs)
+    fiedler_gap = float(eigs_sorted[1]) if len(eigs_sorted) > 1 else np.nan
+
+    # 2) Signed Laplacian
+    nodes = list(G_signed.nodes())
+    idx = {u: i for i, u in enumerate(nodes)}
+    size = len(nodes)
+    W = np.zeros((size, size))
+    # Positive edges
+    for u, v, d in G_pos.edges(data=True):
+        i, j = idx[u], idx[v]
+        w = d.get("weight", 1)
+        W[i, j] += w
+        W[j, i] += w
+    # Negative edges
+    for u, v, d in G_neg.edges(data=True):
+        i, j = idx[u], idx[v]
+        w = abs(d.get("weight", -1))
+        W[i, j] -= w
+        W[j, i] -= w
+    D = np.diag(np.sum(np.abs(W), axis=1))
+    L_signed = D - W
+    eig_signed = np.linalg.eigvalsh(L_signed)
+    eig_signed_sorted = np.sort(eig_signed)
+    signed_gap = float(eig_signed_sorted[1]) if len(eig_signed_sorted) > 1 else np.nan
+
+    records.append(
+        {
+            "scenario": scenario,
+            "n": n,
+            "m": m,
+            "m_pos": m_pos,
+            "m_neg": m_neg,
+            "density": density,
+            "avg_deg": avg_deg,
+            "avg_deg_pos": avg_deg_pos,
+            "avg_deg_neg": avg_deg_neg,
+            "num_planted": num_planted,
+            "comm_size_mean": comm_size_mean,
+            "comm_size_std": comm_size_std,
+            "modularity": modularity,
+            "avg_clustering": avg_clust,
+            "transitivity": trans,
+            "num_cc": num_cc,
+            "diameter": diameter,
+            "avg_path_length": avg_path,
+            "assortativity": assort,
+            "fiedler_gap": fiedler_gap,
+            "signed_laplacian_gap": signed_gap,
+        }
     )
 
-    # 3.2. Extract ground-truth labels from G_signed
-    node_list = sorted(G_signed.nodes())
-    ground_truth = [G_signed.nodes[n]["community"] for n in node_list]
-
-    # 3.3. Run each method on this graph
-    for method_name, (graph_type, params) in methods.items():
-        t_start = time.perf_counter()
-
-        if graph_type == "signed":
-            comm_mapping = run_louvain_signed(
-                G_pos,
-                G_neg,
-                alpha=params["alpha"],
-                resolution=params["resolution"],
-            )
-            pred_nodes = sorted(G_signed.nodes())
-        else:
-            if method_name == "Louvain":
-                comm_mapping = run_louvain(G_pos, resolution=params["resolution"])
-            elif method_name == "Leiden":
-                comm_mapping = run_leiden(G_pos, resolution=params["resolution"])
-            elif method_name == "GreedyModularity":
-                comm_mapping = run_greedy_modularity(G_pos)
-            elif method_name == "SpectralClustering":
-                comm_mapping = run_spectral_clustering(G_pos)
-            else:
-                raise ValueError(f"Unknown method: {method_name}")
-            pred_nodes = sorted(G_pos.nodes())
-
-        t_elapsed = time.perf_counter() - t_start
-
-        # 3.4. Build the predicted-labels list, filling missing nodes with –1 if needed
-        if isinstance(comm_mapping, dict):
-            predicted = [comm_mapping.get(n, -1) for n in pred_nodes]
-        else:
-            predicted = comm_mapping
-
-        # 3.5. Compute metrics
-        nmi = normalized_mutual_info_score(ground_truth, predicted)
-        ari = adjusted_rand_score(ground_truth, predicted)
-        f1 = f1_score(ground_truth, predicted, average="macro")
-        num_comms = len(set(predicted))
-
-        results.append({
-            "Method": method_name,
-            "Seed": seed,
-            "Execution Time (s)": t_elapsed,
-            "NMI": nmi,
-            "ARI": ari,
-            "F1": f1,
-            "Num Communities": num_comms,
-        })
-
-###############################################################################
-# 4. Aggregate & Display Results
-################################################################################
-df = pd.DataFrame(results)
-print("\n=== Raw Results ===")
+# 2) Save to CSV
+df = pd.DataFrame(records)
+os.makedirs("results", exist_ok=True)
+out = "results/scenario_topology.csv"
+df.to_csv(out, index=False)
+print(f"Topology profile saved to: {out}")
 print(df)
-
-# Save to CSV
-output_csv = "results/comparison_results.csv"
-os.makedirs(os.path.dirname(output_csv), exist_ok=True)
-df.to_csv(output_csv, index=False)
-print(f"\nSaved full results to: {output_csv}\n")
-
-###############################################################################
-# 5. Plot Boxplots for Each Metric and Save to results/plots/
-################################################################################
-sns.set_theme(style="whitegrid")
-
-plot_dir = "results/plots"
-os.makedirs(plot_dir, exist_ok=True)
-
-for metric in ["NMI", "ARI", "F1", "Execution Time (s)"]:
-    plt.figure(figsize=(10, 6))
-    ax = sns.boxplot(x="Method", y=metric, data=df)
-
-    # For quality metrics, zoom into [0.9, 1.0]
-    if metric in {"NMI", "ARI", "F1"}:
-        ax.set_ylim(0.5, 1.0)
-
-    # If execution times vary by orders of magnitude, use log scale
-    if metric == "Execution Time (s)":
-        ax.set_yscale("log")
-
-    ax.set_title(f"{metric} Comparison Across Methods", fontsize=16)
-    ax.set_xlabel("Method", fontsize=14)
-    ax.set_ylabel(metric, fontsize=14)
-    plt.xticks(rotation=45, ha="right")
-    plt.tight_layout()
-
-    # Save figure
-    plot_path = os.path.join(plot_dir, f"{metric.replace(' ', '_')}_boxplot.png")
-    plt.savefig(plot_path, dpi=300)
-    print(f"Saved plot: {plot_path}")
-
-    plt.show()
