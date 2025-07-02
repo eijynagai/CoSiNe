@@ -10,7 +10,6 @@ From: python:3.11-slim
     requirements.txt /app/requirements.txt
     src/ /app/src/
     scripts/ /app/scripts/
-    config/ /app/config/
 
 %environment
     export PYTHONPATH=/app/src
