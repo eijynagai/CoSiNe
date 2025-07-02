@@ -1,10 +1,10 @@
+import json
 import logging
 import time
-import json
+from pathlib import Path
+
 import optuna
 import optuna.visualization as vis
-
-from pathlib import Path
 from sklearn.metrics import normalized_mutual_info_score
 
 from CoSiNe.benchmarks.benchmark_community_detection_signed_graph import (
@@ -108,7 +108,7 @@ def main():
     best_params = {
         "alpha": study.best_params["alpha"],
         "gamma": study.best_params["gamma"],
-        "nmi": study.best_value
+        "nmi": study.best_value,
     }
 
     output_dir = Path("src/CoSiNe/benchmarks/hyperparam_tuning/results")
@@ -126,6 +126,7 @@ def main():
 
     fig2 = vis.plot_param_importances(study)
     fig2.write_html(str(output_dir / "param_importances.html"))
+
 
 ###############################################################################
 # 5) ENTRY POINT

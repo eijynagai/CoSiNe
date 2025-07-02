@@ -25,7 +25,6 @@ def renumber(dictionary):
 
 
 def plot_alphas_distributions(G_positive, G_negative, resolution, seed):
-
     alphas = np.arange(0, 1.05, 0.05)
     intra_pos_ratios = []
     inter_pos_ratios = []

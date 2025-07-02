@@ -1,7 +1,9 @@
 import logging
 import os
 import sys
+
 import pandas as pd
+
 from CoSiNe.benchmarks.benchmark_community_detection_signed_graph import (
     benchmark,
     generate_signed_LFR_benchmark_graph,

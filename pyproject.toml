@@ -28,14 +28,12 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
-black = "^25.1.0"
-flake8 = "^7.1.2"
-isort = "^6.0.0"
 mypy = "^1.15.0"
 pytest = "^8.3.4"
 pytest-cov = "^6.0.0"
 pre-commit = "^4.1.0"
 ipykernel = "^6.29.5"
+ruff = "^0.12.1"
 
 [tool.black]
 line-length = 88
@@ -43,3 +41,8 @@ line-length = 88
 [tool.isort]
 profile = "black"
 line_length = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+extend-select = ["B", "I", "UP"]
