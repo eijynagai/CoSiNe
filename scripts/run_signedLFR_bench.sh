@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 conda deactivate 2>/dev/null || true
+cd /Users/eijynagai/Coding/CoSiNe
 
 # Run test 1: simple parameters
 #poetry run python -m CoSiNe.benchmarks.benchmark_community_detection_signed_graph
@@ -12,7 +13,6 @@ conda deactivate 2>/dev/null || true
 #time poetry run python -m CoSiNe.benchmarks.hyperparam_tuning.tune_alpha_gamma_optuna
 
 # Run method comparison
-cd /Users/eijynagai/Coding/CoSiNe
 #time poetry run python compare_methods.py
 #time poetry run python correlation_analysis.py
 

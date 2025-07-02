@@ -1,9 +1,10 @@
 .mypy_cache/
-.pytest_cache/
-.DS_Store
 .venv/
 __pycache__/
-.coverage
+.pytest_cache/
+.DS_Store
+
+
 results/
 plots/
 data/
