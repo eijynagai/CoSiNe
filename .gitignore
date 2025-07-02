@@ -1,6 +1,10 @@
+.mypy_cache/
+.pytest_cache/
+.DS_Store
 .venv/
 __pycache__/
 .coverage
 results/
 plots/
 data/
+src/eeisp.py

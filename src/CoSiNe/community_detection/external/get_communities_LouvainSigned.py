@@ -15,18 +15,15 @@ import argparse
 import os
 import sys
 
-# Ensure the config module is imported correctly
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../modules')))
 import config
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
-from modules.louvain_signed import LouvainSigned
-from modules.network_builder import create_graph_from_file
-from sklearn import metrics
-from sklearn.metrics import auc, roc_curve
-from utils.data_manipulation import *
-from utils.metrics_visualization import *
+from external.data_manipulation import remove_small_communities, save_communities
+from external.louvain_signed import LouvainSigned
+from external.metrics_visualization import (
+    analyze_and_plot_communities,
+    plot_community_sizes,
+)
+from external.network_builder import create_graph_from_file
 
 
 def parse_arguments():
@@ -123,8 +120,7 @@ def main():
     seed = args.seed
     sample_name = f"{sample}_a{alpha_value}_r{res_value}"
     pareto = args.pareto
-
-    print(f"Running LouvainSigned")
+    print("Running LouvainSigned")
     print(f"Sample: {sample}")
     print(f"Alpha value: {alpha_value}")
     print(f"Resolution value: {res_value}")
@@ -207,7 +203,7 @@ def main():
         print(
             f"Number of communities after removing clusters smaller than {threshold}: {max(set(partition_filtered.values())) + 1}\n"
         )
-    except:
+    except Exception:
         print(
             f"No communities found after removing clusters smaller than {threshold}\n"
         )

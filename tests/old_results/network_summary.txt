@@ -1,0 +1,8 @@
+Number of nodes: 600
+Number of edges: 104777
+Average degree: 349.25666666666666
+Min degree: 78
+Max degree: 429
+Density: 0.5830662214802449
+Largest connected component size: 600
+Average clustering coefficient: 0.7677385582716713

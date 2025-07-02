@@ -3,12 +3,8 @@ import logging
 import os
 import time
 
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-import pandas as pd
-import seaborn as sns
-from palettable.colorbrewer.qualitative import Set1_9
 from sklearn.metrics import f1_score
 from sklearn.metrics.cluster import adjusted_rand_score, normalized_mutual_info_score
 
@@ -20,7 +16,7 @@ from CoSiNe.community_detection.louvain import run_louvain
 from CoSiNe.community_detection.louvain_signed import run_louvain_signed
 from CoSiNe.community_detection.spectral_clustering import run_spectral_clustering
 
-# Configure logging.
+# Configure logging (if desired at the library level).
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -31,7 +27,7 @@ logging.basicConfig(
 def get_ground_truth_communities(G):
     """
     Extract the ground-truth community labels from the 'community' attribute of each node.
-    If a node has multiple memberships, the first one is taken; if no community is found, assign -1.
+    If multiple memberships, pick the first. If no community is found, assign -1.
     """
     ground_truth = []
     for node in sorted(G.nodes()):
@@ -49,71 +45,73 @@ def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg, resolution=1.0):
     """
     Run both signed and unsigned community detection methods.
 
-    For LouvainSigned, multiple runs are executed with alpha values (0.1 to 1.0).
-    Other methods (Louvain and Leiden) use the provided resolution.
-    Infomap, Greedy modularity, and Spectral clustering are run on the positive graph.
-
-    Returns:
-      A list of dictionaries with results for one benchmark run.
+    LouvainSigned: uses the passed 'resolution' argument.
+    All other methods: forced to resolution=1.0 (or no resolution if not required).
     """
-    logging.info(f"Benchmarking started at resolution = {resolution}.")
+    logging.info(
+        f"Benchmarking started. LouvainSigned uses resolution={resolution}; others use resolution=1.0 if applicable."
+    )
 
     methods = {}
-    # Prepare LouvainSigned variants (requires both positive and negative graphs)
+
+    # LouvainSigned variants => each alpha uses the user-provided 'resolution'
     for alpha in [round(x * 0.1, 1) for x in range(1, 11)]:
         method_name = f"LouvainSigned_a{alpha}"
         methods[method_name] = (
-            lambda G_pos, G_neg, alpha=alpha, resolution=resolution: run_louvain_signed(
-                G_pos, G_neg, alpha=alpha, resolution=resolution
+            # Pass the user-chosen 'resolution'
+            lambda G_pos, G_neg, alpha=alpha, r=resolution: run_louvain_signed(
+                G_pos, G_neg, alpha=alpha, resolution=r
             ),
             "signed",
         )
-    # Unsigned methods accepting resolution.
+
+    # Now for the methods that must remain at resolution=1.0
+    # (If their code normally accepts a resolution, we override it to 1.0)
     methods["Louvain"] = (
-        lambda G_pos, resolution=resolution: run_louvain(G_pos, resolution=resolution),
+        lambda G_pos: run_louvain(G_pos, resolution=1.0),  # forcibly 1.0
         "pos",
     )
     methods["Leiden"] = (
-        lambda G_pos, resolution=resolution: run_leiden(G_pos, resolution=resolution),
+        lambda G_pos: run_leiden(G_pos, resolution=1.0),  # forcibly 1.0
         "pos",
     )
-    # Methods that do not require the resolution parameter.
+
+    # Methods that either do not support a resolution or do not need it:
     methods["Infomap"] = (run_infomap, "pos")
     methods["Greedy modularity"] = (run_greedy_modularity, "pos")
     methods["Spectral clustering"] = (run_spectral_clustering, "pos")
 
+    # Retrieve ground truth
     ground_truth = get_ground_truth_communities(G_signed)
     run_results = []
 
+    # Iterate over methods
     for method_name, (func, graph_type) in methods.items():
         start_time = time.time()
 
-        # Select the appropriate graph and compute communities.
         if graph_type == "signed":
+            # Pass (G_pos, G_neg) for signed
             communities = func(G_pos, G_neg)
             node_list = sorted(G_signed.nodes())
         else:
-            communities = (
-                func(G_pos, resolution=resolution)
-                if "resolution" in func.__code__.co_varnames
-                else func(G_pos)
-            )
+            # For "pos" methods, just pass G_pos
+            communities = func(G_pos)
             node_list = sorted(G_pos.nodes())
 
         execution_time = time.time() - start_time
 
-        # Log missing community assignments if any.
+        # Check missing
         missing = [node for node in node_list if node not in communities]
         if missing:
-            logging.warning(
-                f"Nodes missing community assignments for {method_name}: {missing}"
-            )
+            logging.warning(f"Nodes missing for {method_name}: {missing}")
 
+        # Convert dictionary-based communities to list if needed
         if isinstance(communities, dict):
             predicted = [communities[node] for node in node_list]
         else:
             predicted = communities
 
+        # Metrics
         nmi = normalized_mutual_info_score(ground_truth, predicted)
         ari = adjusted_rand_score(ground_truth, predicted)
         f1 = f1_score(ground_truth, predicted, average="macro")
@@ -128,7 +126,7 @@ def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg, resolution=1.0):
             {
                 "Method": method_name,
                 "Graph Used": graph_type,
-                "Resolution": resolution,
+                "Resolution": resolution if "Signed" in method_name else 1.0,
                 "Execution Time (s)": round(execution_time, 3),
                 "Number of Communities": num_communities,
                 "NMI": round(nmi, 3),
@@ -137,45 +135,46 @@ def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg, resolution=1.0):
             }
         )
 
-    logging.info(f"Benchmarking finished at resolution = {resolution}.")
+    logging.info("Benchmarking finished.")
     return run_results
 
 
 def benchmark(G_signed, G_pos, G_neg, resolution=1.0, n_runs=20):
     """
-    Run benchmarks for a given resolution over n_runs iterations.
+    Repeats benchmark_signed_and_unsigned n_runs times for a given resolution.
 
     Returns:
-      raw_results: List of dictionaries with results for each run.
-      agg_results: List of aggregated result dictionaries with mean and std of each metric.
+      raw_results: list of dicts (each is one run's data)
+      agg_results: aggregated stats (mean, std) for each method
     """
     raw_results = []
-    for run in range(n_runs):
-        logging.info(f"Run {run+1}/{n_runs} at resolution = {resolution}...")
-        run_results = benchmark_signed_and_unsigned(
+    for i in range(n_runs):
+        logging.info(f"Run {i + 1}/{n_runs} at resolution={resolution}...")
+        run_data = benchmark_signed_and_unsigned(
             G_signed, G_pos, G_neg, resolution=resolution
         )
-        for row in run_results:
-            row["Run"] = run + 1
+        # Tag each result with run index
+        for row in run_data:
+            row["Run"] = i + 1
             raw_results.append(row)
 
-    # Aggregate results by method.
+    # Aggregate
     aggregated = {}
     for row in raw_results:
-        method = row["Method"]
-        if method not in aggregated:
-            aggregated[method] = {
+        m = row["Method"]
+        if m not in aggregated:
+            aggregated[m] = {
                 "Execution Time (s)": [],
                 "Number of Communities": [],
                 "NMI": [],
                 "ARI": [],
                 "F1": [],
             }
-        aggregated[method]["Execution Time (s)"].append(row["Execution Time (s)"])
-        aggregated[method]["Number of Communities"].append(row["Number of Communities"])
-        aggregated[method]["NMI"].append(row["NMI"])
-        aggregated[method]["ARI"].append(row["ARI"])
-        aggregated[method]["F1"].append(row["F1"])
+        aggregated[m]["Execution Time (s)"].append(row["Execution Time (s)"])
+        aggregated[m]["Number of Communities"].append(row["Number of Communities"])
+        aggregated[m]["NMI"].append(row["NMI"])
+        aggregated[m]["ARI"].append(row["ARI"])
+        aggregated[m]["F1"].append(row["F1"])
 
     agg_results = []
     for method, metrics in aggregated.items():
@@ -204,6 +203,7 @@ def benchmark(G_signed, G_pos, G_neg, resolution=1.0, n_runs=20):
                 "F1 Std": round(np.std(metrics["F1"]), 3),
             }
         )
+
     return raw_results, agg_results
 
 
@@ -211,10 +211,7 @@ def generate_signed_LFR_benchmark_graph(
     n, tau1, tau2, mu, P_minus, P_plus, min_community, average_degree, seed
 ):
     """
-    Generate an LFR benchmark graph and derive its positive/negative subgraphs.
-
-    Logs graph generation parameters, and returns a tuple of graphs:
-      (G_signed, G_pos, G_neg)
+    Create an LFR benchmark graph (signed) and produce G_signed, G_pos, G_neg.
     """
     logging.info("Starting LFR graph generation with parameters:")
     logging.info(
@@ -223,7 +220,7 @@ def generate_signed_LFR_benchmark_graph(
         f"avg_deg={average_degree}, seed={seed}"
     )
 
-    start_time = time.time()
+    start_t = time.time()
     try:
         G_signed = signed_LFR_benchmark_graph(
             n=n,
@@ -236,22 +233,23 @@ def generate_signed_LFR_benchmark_graph(
             min_community=min_community,
             seed=seed,
         )
-        logging.info(f"LFR Graph generated in {time.time() - start_time:.2f} sec")
+        logging.info(f"LFR graph generated in {time.time() - start_t:.2f} sec")
     except nx.exception.ExceededMaxIterations:
-        logging.error("LFR Generation failed due to max iterations.")
+        logging.error("LFR generation failed due to max iterations.")
         return None
 
-    # Construct positive subgraph.
+    # Build positive subgraph
     G_pos = nx.Graph()
     G_pos.add_nodes_from(G_signed.nodes(data=True))
     for u, v, d in G_signed.edges(data=True):
         if d.get("weight", 0) > 0:
             G_pos.add_edge(u, v, **d)
+
     logging.info(
         f"Positive subgraph: {G_pos.number_of_nodes()} nodes, {G_pos.number_of_edges()} edges"
     )
 
-    # Construct negative subgraph.
+    # Build negative subgraph
     G_neg = nx.Graph()
     G_neg.add_nodes_from(G_signed.nodes(data=True))
     for u, v, d in G_signed.edges(data=True):
@@ -263,9 +261,14 @@ def generate_signed_LFR_benchmark_graph(
 
 def save_raw_results_to_csv(raw_results, filename):
     """
-    Save raw benchmark results to a CSV file.
+    Save raw benchmark results to CSV.
     """
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    try:
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+    except OSError as e:
+        logging.error(f"Could not create directories for {filename}: {e}")
+        return
+
     fieldnames = [
         "Run",
         "Method",
@@ -285,14 +288,19 @@ def save_raw_results_to_csv(raw_results, filename):
                 writer.writerow(row)
         logging.info(f"Raw results saved as CSV to: {filename}")
     except Exception as e:
-        logging.error(f"Failed to save raw results: {e}")
+        logging.error(f"Error writing raw results to {filename}: {e}")
 
 
 def save_aggregated_results_to_csv(agg_results, filename):
     """
-    Save aggregated benchmark results to a CSV file.
+    Save aggregated benchmark results to CSV.
     """
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    try:
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+    except OSError as e:
+        logging.error(f"Could not create directories for {filename}: {e}")
+        return
+
     fieldnames = [
         "Method",
         "Resolution",
@@ -316,119 +324,56 @@ def save_aggregated_results_to_csv(agg_results, filename):
                 writer.writerow(row)
         logging.info(f"Aggregated results saved as CSV to: {filename}")
     except Exception as e:
-        logging.error(f"Failed to save aggregated results: {e}")
+        logging.error(f"Error writing aggregated results to {filename}: {e}")
 
 
-def save_boxplots_for_metrics_by_resolution(resolution, metrics, raw_dir, output_dir):
+def plot_boxplots_for_metrics(raw_results, metrics, output_dir, resolution):
     """
-    Read raw CSV data for the given resolution and generate boxplots for each metric.
-
-    Parameters:
-      resolution (float): Resolution value to identify the CSV file.
-      metrics (list of str): Metrics to plot.
-      raw_dir (str): Directory of the raw CSV file.
-      output_dir (str): Directory to save the boxplots.
+    Create and save boxplots for each specified metric directly from in-memory raw_results,
+    labeling plots with the current resolution value.
     """
-    raw_filename = os.path.join(raw_dir, f"benchmark_raw_res_{resolution}.csv")
-    if not os.path.exists(raw_filename):
-        logging.error(f"Raw CSV file {raw_filename} not found.")
-        return
+    import logging
+    import os
+
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import seaborn as sns
+    from palettable.colorbrewer.qualitative import Set1_9
 
     os.makedirs(output_dir, exist_ok=True)
-    df = pd.read_csv(raw_filename)
+    df = pd.DataFrame(raw_results)
+
+    logging.debug(f"Plotting from DataFrame with columns: {df.columns.tolist()}")
     sns.set_theme(style="whitegrid")
     palette = Set1_9.mpl_colors
 
     for metric in metrics:
+        if metric not in df.columns:
+            logging.warning(f"Metric '{metric}' not found in raw_results.")
+            continue
+
         plt.figure(figsize=(12, 8))
         ax = sns.boxplot(x="Method", y=metric, data=df, palette=palette)
+
+        # Title can include the resolution
         ax.set_title(
-            f"Distribution of {metric} at resolution {resolution}", fontsize=16
+            f"Distribution of {metric} at resolution={resolution}", fontsize=16
         )
+
         ax.set_xlabel("Method", fontsize=14)
         ax.set_ylabel(metric, fontsize=14)
         plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
 
-        out_file = os.path.join(
-            output_dir, f"benchmark_raw_res_{resolution}_{metric}_boxplot.png"
-        )
+        # Incorporate the resolution into the output filename as well
+        out_file = os.path.join(output_dir, f"{metric}_boxplot_res_{resolution}.png")
+
         try:
             plt.savefig(out_file, dpi=300)
             logging.info(
-                f"Saved boxplot for {metric} at resolution {resolution} to: {out_file}"
+                f"Saved boxplot for '{metric}' at resolution {resolution} to: {out_file}"
             )
         except Exception as e:
-            logging.error(f"Failed to save boxplot for {metric}: {e}")
-        plt.close()
-
-
-# Entry point for running the full benchmark pipeline.
-if __name__ == "__main__":
-    logging.info("Starting full benchmark pipeline...")
-    start_time = time.time()
-
-    # Generate graph with hardcoded parameters or modify as needed.
-    # (Ensure you pass all required parameters.)
-    try:
-        graphs = generate_signed_LFR_benchmark_graph(
-            n=250,
-            tau1=3.0,
-            tau2=1.5,
-            mu=0.1,
-            P_minus=0.5,
-            P_plus=0.8,
-            min_community=20,
-            average_degree=5,
-            seed=10,
-        )
-    except Exception as e:
-        logging.error(f"Graph generation failed with exception: {e}")
-        exit(1)
-
-    if graphs is None:
-        logging.error("LFR Graph Generation Failed. Exiting...")
-        exit(1)
-
-    G_signed, G_pos, G_neg = graphs
-    logging.info(
-        f"Graph ready: {G_signed.number_of_nodes()} nodes, {G_signed.number_of_edges()} edges."
-    )
-    logging.info(f"LFR Graph Generation Time: {time.time() - start_time:.2f} sec")
-
-    # List of resolution values to benchmark.
-    resolution_values = [0.5, 0.75, 1.0, 1.25, 1.5]
-    n_runs = 20  # Number of runs per resolution
-
-    for res in resolution_values:
-        logging.info(f"Running benchmark for resolution = {res} over {n_runs} runs...")
-        res_start = time.time()
-        raw_results, agg_results = benchmark(
-            G_signed, G_pos, G_neg, resolution=res, n_runs=n_runs
-        )
-        exec_time = time.time() - res_start
-        logging.info(
-            f"Benchmark for resolution = {res} finished in {exec_time:.2f} sec."
-        )
-
-        raw_filename = os.path.join("results", f"benchmark_raw_res_{res}.csv")
-        agg_filename = os.path.join("results", f"benchmark_agg_res_{res}.csv")
-        save_raw_results_to_csv(raw_results, raw_filename)
-        save_aggregated_results_to_csv(agg_results, agg_filename)
-
-    logging.info("All benchmarks complete.")
-
-    # Generate boxplots.
-    metrics_to_plot = [
-        "NMI",
-        "ARI",
-        "F1",
-        "Number of Communities",
-        "Execution Time (s)",
-    ]
-    for res in resolution_values:
-        save_boxplots_for_metrics_by_resolution(
-            res, metrics_to_plot, raw_dir="results", output_dir="plots"
-        )
-
-    logging.info("Benchmark pipeline finished.")
+            logging.error(f"Failed to save boxplot for '{metric}': {e}")
+        finally:
+            plt.close()

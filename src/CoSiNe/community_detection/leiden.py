@@ -52,7 +52,6 @@ def run_leiden(G, partition_type=la.RBConfigurationVertexPartition, resolution=1
 
 # Example usage:
 if __name__ == "__main__":
-
     G = nx.erdos_renyi_graph(10, 0.3, seed=42)
     # Ensure edges have weights:
     for u, v in G.edges():
