@@ -25,3 +25,7 @@ time python compare_methods.py
 # Run runtime comparison
 #time poetry run python runtime_benchmark.py
 #time poetry run python plot_runtime.py
+
+# Run runtime comparison
+#time poetry run python runtime_benchmark.py
+#time poetry run python plot_runtime.py
