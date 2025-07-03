@@ -8,7 +8,7 @@ import numpy as np
 from sklearn.metrics import f1_score
 from sklearn.metrics.cluster import adjusted_rand_score, normalized_mutual_info_score
 
-from CoSiNe.community_detection.external.signedLFR import signed_LFR_benchmark_graph
+from signedLFR.signedLFR import signed_LFR_benchmark_graph
 from CoSiNe.community_detection.greedy_modularity import run_greedy_modularity
 from CoSiNe.community_detection.infomap import run_infomap
 from CoSiNe.community_detection.leiden import run_leiden
