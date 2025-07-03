@@ -3,6 +3,15 @@ import logging
 import os
 import sys
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)
+sys.path.insert(0, os.path.join(project_root, "src"))
+
+# Locate the scenarios CSV or raise error
+scenarios_path = os.path.join(project_root, "config", "batch", "scenarios_param.csv")
+if not os.path.exists(scenarios_path):
+    raise FileNotFoundError(f"Could not find simulation settings CSV at {scenarios_path}")
+    
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -22,7 +31,7 @@ logging.basicConfig(
 )
 
 # 1) Read scenarios
-scenarios = pd.read_csv("scenarios.csv", comment="#")
+scenarios = pd.read_csv(scenarios_path, comment="#")
 
 records = []
 for _, row in tqdm(
@@ -142,8 +151,9 @@ for _, row in tqdm(
 
 # 2) Save to CSV
 df = pd.DataFrame(records)
-os.makedirs("results", exist_ok=True)
-out = "results/scenario_topology.csv"
+out_dir = os.path.join(project_root, "results")
+os.makedirs(out_dir, exist_ok=True)
+out = os.path.join(out_dir, "scenario_topology.csv")
 df.to_csv(out, index=False)
 print(f"Topology profile saved to: {out}")
 print(df)

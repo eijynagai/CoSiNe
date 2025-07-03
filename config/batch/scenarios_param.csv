@@ -1,0 +1,5 @@
+scenario,n,tau1,tau2,mu,P_minus,P_plus,average_degree,min_community
+low_counts,2000,2.8,1.5,0.30,0.30,0.15,5,30
+sufficient_counts,2000,3.0,1.5,0.10,0.20,0.05,10,50
+atlas_size,5000,3.0,1.5,0.10,0.20,0.05,10,50
+mega_atlas,10000,2.5,1.5,0.15,0.25,0.05,12,100

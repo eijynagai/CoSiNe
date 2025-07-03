@@ -1,0 +1,7 @@
+# config/signedLFR_optuna.yml
+n_trials: 100
+seeds: [42, 43, 44]
+graph_params:
+  n: 10000
+  mu: 0.1
+alpha_range: { min: 0.0, max: 1.0 }
