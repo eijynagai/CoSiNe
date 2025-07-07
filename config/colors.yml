@@ -1,0 +1,7 @@
+# config/colors.yaml
+method_colors:
+  LouvainSigned: "#1f77b4"
+  Louvain:       "#ff7f0e"
+  Leiden:        "#2ca02c"
+  Greedy:        "#d62728"
+  LabelProp:     "#9467bd"

@@ -20,12 +20,9 @@ conda activate cosine
 # Run method comparison
 #time poetry run python compare_methods.py
 #time poetry run python correlation_analysis.py
-time python compare_methods.py
+#time python compare_methods.py
 
 # Run runtime comparison
 #time poetry run python runtime_benchmark.py
 #time poetry run python plot_runtime.py
-
-# Run runtime comparison
-#time poetry run python runtime_benchmark.py
-#time poetry run python plot_runtime.py
+time python runtime_benchmark.py
