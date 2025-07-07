@@ -11,7 +11,13 @@ import yaml
 import networkx as nx
 import random
 import multiprocessing
-from concurrent.futures import ProcessPoolExecutor, as_completed
+import platform
+import json
+import psutil
+from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError
+
+# Timeout per worker task (seconds)
+TASK_TIMEOUT = 60
 
 # Load method colors from config/colors.yml
 color_config_path = project_root / "config" / "colors.yml"
@@ -44,15 +50,11 @@ methods = {
     "Leiden": ("pos", {"resolution": 1.0}),
 }
 
-sizes = [1000, 2000, 5000]
+sizes = [1000, 2000, 5000] #10000
 degrees = [5, 10, 20]
-mixings = [0.05, 0.2, 0.5]
-seeds = list(range(1, 11))  # seeds 1 through 10 for robust estimates
+mixings = [0.05, 0.2] # 0.5
 seeds = list(range(1, 11))  # seeds 1 through 10 for robust estimates
 logging.info(f"Running benchmarks with seeds: {seeds}")
-
-total_runs = len(sizes) * len(degrees) * len(mixings) * len(seeds) * len(methods)
-pbar = tqdm(total=total_runs, desc="Benchmark runs", unit="run")
 
 failure_log = []
 
@@ -88,22 +90,31 @@ def run_benchmark_task(n, k, mu, seed, name, gtype, params):
         return None
     Gs, Gp, Gn = res
 
-    # detection
-    t0 = time.perf_counter()
-    if gtype == "signed":
-        run_louvain_signed(Gp, Gn, **params)
-    else:
-        if name == "Louvain":
-            run_louvain(Gp, **params)
-        elif name == "Leiden":
-            run_leiden(Gp, **params)
-        elif name == "Greedy":
-            run_greedy_modularity(Gp)
-        elif name == "Infomap":
-            run_infomap(Gp)
-        elif name == "LPA":
-            run_label_propagation(Gp)
-    detect_time = time.perf_counter() - t0
+    # detection with error capture
+    try:
+        t0_detect = time.perf_counter()
+        if gtype == "signed":
+            run_louvain_signed(Gp, Gn, **params)
+        else:
+            if name == "Louvain":
+                run_louvain(Gp, **params)
+            elif name == "Leiden":
+                run_leiden(Gp, **params)
+            elif name == "Greedy":
+                run_greedy_modularity(Gp)
+            elif name == "Infomap":
+                run_infomap(Gp)
+            elif name == "LPA":
+                run_label_propagation(Gp)
+        detect_time = time.perf_counter() - t0_detect
+    except Exception as e:
+        logging.error("Detection failed [%s, seed %d]: %s", name, seed, e)
+        failure_log.append({
+            "n": n, "avg_deg": k, "mu": mu,
+            "seed": seed, "method": name,
+            "error": f"DetectionError: {e}"
+        })
+        return None
 
     return {
         "n": n,
@@ -121,7 +132,6 @@ tasks = [
     for n in sizes for k in degrees for mu in mixings
     for seed in seeds for name, (gtype, params) in methods.items()
 ]
-total_runs = len(tasks)
 records = []
 
 # Run in parallel
@@ -130,8 +140,17 @@ with ProcessPoolExecutor(max_workers=max_workers) as exe:
     futures = [
         exe.submit(run_benchmark_task, *t) for t in tasks
     ]
-    for f in tqdm(as_completed(futures), total=total_runs, desc="Benchmark runs"):
-        res = f.result()
+    for f in tqdm(as_completed(futures), total=len(futures), desc="Benchmark runs"):
+        try:
+            res = f.result(timeout=TASK_TIMEOUT)
+        except TimeoutError:
+            logging.error("Task timed out after %ds", TASK_TIMEOUT)
+            failure_log.append({"error": "Timeout"})
+            continue
+        except Exception as e:
+            logging.error("Task raised exception: %s", e)
+            failure_log.append({"error": str(e)})
+            continue
         if res is not None:
             records.append(res)
 
@@ -148,6 +167,34 @@ if failure_log:
 total = len(records) + len(failure_log)
 logging.info(f"LFR generation failed {len(failure_log)}/{total} times "
              f"({len(failure_log)/total:.1%})")
+
+# --- Save environment metadata ---
+meta = {
+    "python_version": platform.python_version(),
+    "platform": platform.platform(),
+    "cpu_count": multiprocessing.cpu_count(),
+    "memory_total_mb": psutil.virtual_memory().total / 1e6,
+    "packages": {
+        "networkx": nx.__version__,
+        "pandas": pd.__version__,
+        "seaborn": sns.__version__,
+    },
+}
+md_path = project_root / "results" / "runtime_benchmark_metadata.json"
+with open(md_path, "w") as mf:
+    json.dump(meta, mf, indent=2)
+logging.info("Saved metadata to %s", md_path)
+
+# --- Compute and save summary statistics ---
+summary = df.groupby(["method", "n", "avg_deg", "mu"]).agg(
+    build_time_mean=("build_time_s", "mean"),
+    build_time_std=("build_time_s", "std"),
+    detect_time_mean=("detect_time_s", "mean"),
+    detect_time_std=("detect_time_s", "std"),
+).reset_index()
+summary_path = project_root / "results" / "runtime_benchmark_summary.csv"
+summary.to_csv(summary_path, index=False)
+logging.info("Saved summary to %s", summary_path)
 
 # ---- Plotting ----
 PLOT_DIR = os.path.join("results")
