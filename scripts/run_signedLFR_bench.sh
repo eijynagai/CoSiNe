@@ -22,7 +22,11 @@ conda activate cosine
 #time poetry run python correlation_analysis.py
 #time python compare_methods.py
 
-# Run runtime comparison
+# Run runtime comparison #2
 #time poetry run python runtime_benchmark.py
 #time poetry run python plot_runtime.py
 time python runtime_benchmark.py
+
+# Run performance_benchmark
+#time poetry run python performance_benchmark.py
+#time python performance_benchmark.py

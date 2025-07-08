@@ -9,15 +9,14 @@ sys.path.insert(0, os.path.join(project_root, "src"))
 
 import yaml
 import networkx as nx
-import random
 import multiprocessing
 import platform
 import json
 import psutil
-from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError
+from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError, wait
 
 # Timeout per worker task (seconds)
-TASK_TIMEOUT = 60
+TASK_TIMEOUT = 30
 
 # Load method colors from config/colors.yml
 color_config_path = project_root / "config" / "colors.yml"
@@ -29,6 +28,7 @@ import logging
 import time
 
 import pandas as pd
+# import tqdm
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -37,7 +37,6 @@ from CoSiNe.benchmarks.benchmark_community_detection_signed_graph import (
     generate_signed_LFR_benchmark_graph,
 )
 from CoSiNe.community_detection.greedy_modularity import run_greedy_modularity
-from CoSiNe.community_detection.infomap import run_infomap
 from CoSiNe.community_detection.label_propagation import run_label_propagation
 from CoSiNe.community_detection.leiden import run_leiden
 from CoSiNe.community_detection.louvain import run_louvain
@@ -47,16 +46,17 @@ logging.basicConfig(level=logging.INFO)
 
 methods = {
     "LouvainSigned": ("signed", {"alpha": 1.0, "resolution": 1.0}),
-    "Leiden": ("pos", {"resolution": 1.0}),
+    "Louvain":      ("pos",    {"resolution": 1.0}),
+    "Leiden":       ("pos",    {"resolution": 1.0}),
+    "Greedy":       ("pos",    {}),
+    "LPA":          ("pos",    {}),
 }
 
-sizes = [1000, 2000, 5000] #10000
-degrees = [5, 10, 20]
-mixings = [0.05, 0.2] # 0.5
-seeds = list(range(1, 11))  # seeds 1 through 10 for robust estimates
+sizes   = [1000, 3000] #,3000
+degrees = [5, 15] #, 15
+mixings = [0.10, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+seeds   = [1, 5, 13, 35, 82] #1, 5, 9, 13, 17, 23, 35, 41, 47, 82
 logging.info(f"Running benchmarks with seeds: {seeds}")
-
-failure_log = []
 
 # --- Parallelized benchmark logic ---
 def run_benchmark_task(n, k, mu, seed, name, gtype, params):
@@ -67,9 +67,9 @@ def run_benchmark_task(n, k, mu, seed, name, gtype, params):
         t0 = time.perf_counter()
         try:
             res = generate_signed_LFR_benchmark_graph(
-                n=n, tau1=3.0, tau2=1.5, mu=mu,
-                P_minus=0.2, P_plus=0.05,
-                average_degree=k, min_community=50,
+                n=n, tau1=2.8, tau2=1.5, mu=mu,
+                P_minus=0.3, P_plus=0.15,
+                average_degree=k, min_community=30,
                 seed=seed + attempt,    # vary seed on retry
                 tol=1e-5,               # relax tolerance
                 max_iters=5000,         # increase iteration cap
@@ -102,8 +102,6 @@ def run_benchmark_task(n, k, mu, seed, name, gtype, params):
                 run_leiden(Gp, **params)
             elif name == "Greedy":
                 run_greedy_modularity(Gp)
-            elif name == "Infomap":
-                run_infomap(Gp)
             elif name == "LPA":
                 run_label_propagation(Gp)
         detect_time = time.perf_counter() - t0_detect
@@ -120,39 +118,64 @@ def run_benchmark_task(n, k, mu, seed, name, gtype, params):
         "n": n,
         "avg_deg": k,
         "mu": mu,
-        "seed": seed,
-        "method": name,
+        "Seed": seed,
+        "Method": name,
         "build_time_s": round(build_time, 4),
         "detect_time_s": round(detect_time, 4),
     }
 
-# Build all tasks
-tasks = [
-    (n, k, mu, seed, name, gtype, params)
-    for n in sizes for k in degrees for mu in mixings
-    for seed in seeds for name, (gtype, params) in methods.items()
-]
+##
+# Batch by (n, avg_deg) to limit concurrency and avoid stalling
+##
 records = []
+failure_log = []
 
-# Run in parallel
-max_workers = min(len(tasks), multiprocessing.cpu_count())
-with ProcessPoolExecutor(max_workers=max_workers) as exe:
-    futures = [
-        exe.submit(run_benchmark_task, *t) for t in tasks
+batch_iter = list((n, k) for n in sizes for k in degrees)
+for n, k in tqdm(batch_iter, desc="Batches (n,deg)", total=len(batch_iter)):
+    batch = [
+        (n, k, mu, seed, name, gtype, params)
+        for mu in mixings
+        for seed in seeds
+        for name, (gtype, params) in methods.items()
     ]
-    for f in tqdm(as_completed(futures), total=len(futures), desc="Benchmark runs"):
-        try:
-            res = f.result(timeout=TASK_TIMEOUT)
-        except TimeoutError:
-            logging.error("Task timed out after %ds", TASK_TIMEOUT)
-            failure_log.append({"error": "Timeout"})
-            continue
-        except Exception as e:
-            logging.error("Task raised exception: %s", e)
-            failure_log.append({"error": str(e)})
-            continue
-        if res is not None:
-            records.append(res)
+    logging.info("Starting batch n=%d, avg_deg=%d with %d tasks", n, k, len(batch))
+
+    with ProcessPoolExecutor(max_workers=max_workers) as exe:
+        futures = {exe.submit(run_benchmark_task, *t): t for t in batch}
+
+        # now wrap the as_completed in its own tqdm
+        for f in tqdm(as_completed(futures), desc=f"Tasks n={n} deg={k}", total=len(batch)):
+            try:
+                res = f.result(timeout=TASK_TIMEOUT)
+            except Exception as e:
+                task = futures[f]
+                logging.error("Task %r failed: %s", task, e)
+                failure_log.append({**_task_to_dict(task), "error": str(e)})
+                continue
+            if res:
+                records.append(res)
+
+        # cancel any stragglers
+        for f in futures:
+            if not f.done():
+                f.cancel()
+        exe.shutdown(wait=False, cancel_futures=True)
+
+        logging.info("Batch done: %d succeeded, %d timed out", len(done), len(not_done))
+
+        for f in done:
+            try:
+                res = f.result()
+            except Exception as e:
+                task = futures[f]
+                logging.error("Task %r failed: %s", task, e)
+                failure_log.append({**_task_to_dict(task), "error": str(e)})
+            else:
+                if res:
+                    records.append(res)
+
+        # Cancel any remaining futures before shutdown
+        exe.shutdown(wait=False, cancel_futures=True)
 
 df = pd.DataFrame(records)
 os.makedirs("results", exist_ok=True)
@@ -186,7 +209,7 @@ with open(md_path, "w") as mf:
 logging.info("Saved metadata to %s", md_path)
 
 # --- Compute and save summary statistics ---
-summary = df.groupby(["method", "n", "avg_deg", "mu"]).agg(
+summary = df.groupby(["Method", "n", "avg_deg", "mu"]).agg(
     build_time_mean=("build_time_s", "mean"),
     build_time_std=("build_time_s", "std"),
     detect_time_mean=("detect_time_s", "mean"),
@@ -213,7 +236,7 @@ for n_val in SIZES:
         data=df_n,
         x="avg_deg",
         y="detect_time_s",
-        hue="method",
+        hue="Method",
         palette=METHOD_COLORS
     )
     ax.set_title(f"Runtime vs. Degree (n={n_val})")
@@ -223,7 +246,7 @@ for n_val in SIZES:
     out2 = PLOT_DIR / f"runtime_vs_degree_n{n_val}.png"
     plt.savefig(out2, dpi=300)
     plt.close()
-    print(f"Saved plot: {out2}")
+    logging.info("Saved plot: %s", out2)
 
 # 7) Plot: runtime vs mixing parameter mu per graph size
 for n_val in SIZES:
@@ -233,9 +256,10 @@ for n_val in SIZES:
         data=df_n,
         x="mu",
         y="detect_time_s",
-        hue="method",
-        style="method",
-        markers=True, dashes=True,
+        hue="Method",
+        style="Method",
+        markers=True, 
+        dashes=True,
         estimator="mean",
         errorbar="sd",
         palette=METHOD_COLORS
@@ -247,4 +271,4 @@ for n_val in SIZES:
     out3 = PLOT_DIR / f"runtime_vs_mu_n{n_val}.png"
     plt.savefig(out3, dpi=300)
     plt.close()
-    print(f"Saved plot: {out3}")
+    logging.info("Saved plot: %s", out3)

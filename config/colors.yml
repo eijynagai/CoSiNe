@@ -4,4 +4,4 @@ method_colors:
   Louvain:       "#ff7f0e"
   Leiden:        "#2ca02c"
   Greedy:        "#d62728"
-  LabelProp:     "#9467bd"
+  LPA:     "#9467bd"
