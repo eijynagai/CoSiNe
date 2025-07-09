@@ -7,6 +7,9 @@
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate cosine
 
+# Clean results
+bash run_clean.sh
+
 # Run test 1: simple parameters
 #poetry run python -m CoSiNe.benchmarks.benchmark_community_detection_signed_graph
 #tmux new-session -d -s "signedLFR" poetry run python -m  CoSiNe.benchmarks.run_pipeline
@@ -25,7 +28,7 @@ conda activate cosine
 # Run runtime comparison #2
 #time poetry run python runtime_benchmark.py
 #time poetry run python plot_runtime.py
-time python runtime_benchmark.py
+time python runtime_benchmark.py --scenarios ../config/batch/scenarios_param.csv --output-dir ../results
 
 # Run performance_benchmark
 #time poetry run python performance_benchmark.py
