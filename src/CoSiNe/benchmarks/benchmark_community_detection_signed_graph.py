@@ -2,6 +2,49 @@ import csv
 import logging
 import os
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError
+def _run_single_method(method_name, func, graph_type, G_signed, G_pos, G_neg, resolution, timeout=30):
+    """
+    Run one community detection method with a timeout.
+    Returns the result dict or logs and returns None on failure.
+    """
+    start_time = time.time()
+    try:
+        if graph_type == "signed":
+            communities = func(G_pos, G_neg)
+            node_list = sorted(G_signed.nodes())
+        else:
+            communities = func(G_pos)
+            node_list = sorted(G_pos.nodes())
+
+        execution_time = time.time() - start_time
+
+        # Convert to list predictions
+        if isinstance(communities, dict):
+            predicted = [communities.get(node, -1) for node in node_list]
+        else:
+            predicted = communities
+
+        # Metrics
+        ground_truth = get_ground_truth_communities(G_signed)
+        nmi = normalized_mutual_info_score(ground_truth, predicted)
+        ari = adjusted_rand_score(ground_truth, predicted)
+        f1 = f1_score(ground_truth, predicted, average="macro")
+        num_communities = len(set(predicted))
+
+        return {
+            "Method": method_name,
+            "Graph Used": graph_type,
+            "Resolution": resolution if "Signed" in method_name else 1.0,
+            "Execution Time (s)": round(execution_time, 3),
+            "Number of Communities": num_communities,
+            "NMI": round(nmi, 3),
+            "ARI": round(ari, 3),
+            "F1": round(f1, 3),
+        }
+    except Exception as e:
+        logging.error(f"Method {method_name} failed: {e}")
+        return None
 
 import networkx as nx
 import numpy as np
@@ -85,55 +128,21 @@ def benchmark_signed_and_unsigned(G_signed, G_pos, G_neg, resolution=1.0):
     ground_truth = get_ground_truth_communities(G_signed)
     run_results = []
 
-    # Iterate over methods
-    for method_name, (func, graph_type) in methods.items():
-        start_time = time.time()
-
-        if graph_type == "signed":
-            # Pass (G_pos, G_neg) for signed
-            communities = func(G_pos, G_neg)
-            node_list = sorted(G_signed.nodes())
-        else:
-            # For "pos" methods, just pass G_pos
-            communities = func(G_pos)
-            node_list = sorted(G_pos.nodes())
-
-        execution_time = time.time() - start_time
-
-        # Check missing
-        missing = [node for node in node_list if node not in communities]
-        if missing:
-            logging.warning(f"Nodes missing for {method_name}: {missing}")
-
-        # Convert dictionary-based communities to list if needed
-        if isinstance(communities, dict):
-            predicted = [communities[node] for node in node_list]
-        else:
-            predicted = communities
-
-        # Metrics
-        nmi = normalized_mutual_info_score(ground_truth, predicted)
-        ari = adjusted_rand_score(ground_truth, predicted)
-        f1 = f1_score(ground_truth, predicted, average="macro")
-        num_communities = len(set(predicted))
-
-        logging.info(
-            f"Method {method_name}: {num_communities} communities in {execution_time:.2f}s "
-            f"(NMI={nmi:.3f}, ARI={ari:.3f})"
-        )
-
-        run_results.append(
-            {
-                "Method": method_name,
-                "Graph Used": graph_type,
-                "Resolution": resolution if "Signed" in method_name else 1.0,
-                "Execution Time (s)": round(execution_time, 3),
-                "Number of Communities": num_communities,
-                "NMI": round(nmi, 3),
-                "ARI": round(ari, 3),
-                "F1": round(f1, 3),
-            }
-        )
+    # Run each method in parallel with a timeout
+    timeout = 30  # seconds per method
+    with ProcessPoolExecutor(max_workers=len(methods)) as executor:
+        futures = {
+            executor.submit(
+                _run_single_method,
+                method_name, func, graph_type,
+                G_signed, G_pos, G_neg, resolution, timeout
+            ): method_name
+            for method_name, (func, graph_type) in methods.items()
+        }
+        for future in as_completed(futures, timeout=timeout * len(futures)):
+            result = future.result(timeout=timeout)
+            if result is not None:
+                run_results.append(result)
 
     logging.info("Benchmarking finished.")
     return run_results
@@ -208,16 +217,23 @@ def benchmark(G_signed, G_pos, G_neg, resolution=1.0, n_runs=20):
 
 
 def generate_signed_LFR_benchmark_graph(
-    n, tau1, tau2, mu, P_minus, P_plus, min_community, average_degree, seed
+    n, tau1, tau2, mu, P_minus, P_plus,
+    min_community, average_degree,
+    seed,
+    tol=1e-7,
+    max_iters=500,
 ):
     """
     Create an LFR benchmark graph (signed) and produce G_signed, G_pos, G_neg.
+
+    *tol* = tolerance for degree/community zeta computations,
+    *max_iters* = maximum iterations for sequence generation
     """
     logging.info("Starting LFR graph generation with parameters:")
     logging.info(
         f"n={n}, tau1={tau1}, tau2={tau2}, mu={mu}, "
         f"P_minus={P_minus}, P_plus={P_plus}, min_comm={min_community}, "
-        f"avg_deg={average_degree}, seed={seed}"
+        f"avg_deg={average_degree}, seed={seed}, tol={tol}, max_iters={max_iters}"
     )
 
     start_t = time.time()
@@ -232,6 +248,8 @@ def generate_signed_LFR_benchmark_graph(
             average_degree=average_degree,
             min_community=min_community,
             seed=seed,
+            tol=tol,
+            max_iters=max_iters,
         )
         logging.info(f"LFR graph generated in {time.time() - start_t:.2f} sec")
     except nx.exception.ExceededMaxIterations:
