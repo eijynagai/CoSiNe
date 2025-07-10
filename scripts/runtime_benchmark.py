@@ -69,7 +69,7 @@ def parse_args() -> argparse.Namespace:
         "--seeds",
         type=int,
         nargs="+",
-        default=[3, 5, 13, 35, 82],
+        default=[3, 5, 13, 47, 82],
         help="List of random seeds to use for graph generation",
     )
     parser.add_argument(
@@ -194,16 +194,16 @@ def run_benchmark_task(
     try:
         t0_detect = time.perf_counter()
         if gtype == "signed":
-            run_louvain_signed(Gp, Gn, **params)
+            comm = run_louvain_signed(Gp, Gn, **params)
         else:
             if name == "Louvain":
-                run_louvain(Gp, **params)
+                comm = run_louvain(Gp, **params)
             elif name == "Leiden":
-                run_leiden(Gp, **params)
+                comm = run_leiden(Gp, **params)
             elif name == "Greedy":
-                run_greedy_modularity(Gp)
+                comm = run_greedy_modularity(Gp)
             elif name == "LPA":
-                run_label_propagation(Gp)
+                comm = run_label_propagation(Gp)
         detect_time = time.perf_counter() - t0_detect
     except Exception as e:
         return {
@@ -220,6 +220,12 @@ def run_benchmark_task(
             "error": f"DetectionError: {e}",
         }
 
+    # compute number of communities detected
+    if isinstance(comm, dict):
+        num_comms = len(set(comm.values()))
+    else:
+        num_comms = len(set(comm))
+
     return {
         "n": n,
         "tau1": tau1,
@@ -233,6 +239,7 @@ def run_benchmark_task(
         "Method": name,
         "build_time_s": round(build_time, 4),
         "detect_time_s": round(detect_time, 4),
+        "num_comms": num_comms,
     }
 
 
@@ -424,9 +431,10 @@ def main(args: argparse.Namespace) -> None:
             hue="Method",
             palette=METHOD_COLORS
         )
+        ax.set_yscale("log")
         ax.set_title(f"Detection Time vs Average Degree ({scen})")
         ax.set_xlabel("Average degree (⟨k⟩)")
-        ax.set_ylabel("Detection time (s)")
+        ax.set_ylabel("Detection time (s) [log scale]")
         plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
         plt.tight_layout()
         out1 = plot_dir / f"{scen}_runtime_vs_degree.png"
@@ -448,9 +456,10 @@ def main(args: argparse.Namespace) -> None:
             errorbar="sd",
             palette=METHOD_COLORS
         )
+        ax.set_yscale("log")
         ax.set_title(f"Detection Time vs Mixing μ ({scen})")
         ax.set_xlabel("Mixing parameter μ")
-        ax.set_ylabel("Detection time (s)")
+        ax.set_ylabel("Detection time (s) [log scale]")
         plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
         plt.tight_layout()
         out2 = plot_dir / f"{scen}_runtime_vs_mu.png"
@@ -472,15 +481,118 @@ def main(args: argparse.Namespace) -> None:
             errorbar="sd",
             palette=METHOD_COLORS
         )
+        ax.set_yscale("log")
         ax.set_title(f"Detection Time vs P_plus ({scen})")
         ax.set_xlabel("Positive edge fraction P_plus")
-        ax.set_ylabel("Detection time (s)")
+        ax.set_ylabel("Detection time (s) [log scale]")
         plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
         plt.tight_layout()
         out3 = plot_dir / f"{scen}_runtime_vs_pplus.png"
         plt.savefig(out3, dpi=300)
         plt.close()
         logger.info("Saved plot: %s", out3)
+
+        # 4) Detection time vs number of communities (scatter + regression)
+        plt.figure(figsize=(8, 5))
+        # scatter of raw points
+        sns.scatterplot(
+            data=df_s,
+            x="num_comms",
+            y="detect_time_s",
+            hue="Method",
+            palette=METHOD_COLORS,
+            alpha=0.6,
+            s=50
+        )
+        # overlay linear regression per method
+        for method in df_s["Method"].unique():
+            sns.regplot(
+                data=df_s[df_s["Method"] == method],
+                x="num_comms",
+                y="detect_time_s",
+                scatter=False,
+                color=METHOD_COLORS.get(method),
+                line_kws={"linewidth": 2},
+            )
+        ax = plt.gca()
+        ax.set_xscale("linear")
+        ax.set_yscale("log")
+        ax.set_title(f"Detection Time vs Number of Communities ({scen})")
+        ax.set_xlabel("Number of detected communities")
+        ax.set_ylabel("Detection time (s) [log scale]")
+        plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
+        plt.tight_layout()
+        out4 = plot_dir / f"{scen}_runtime_vs_num_comms.png"
+        plt.savefig(out4, dpi=300)
+        plt.close()
+        logger.info("Saved plot: %s", out4)
+
+    # ---- Cross-scenario global plots ----
+    # 5) Detection time vs number of nodes (scatter + regression)
+    plt.figure(figsize=(8, 5))
+    sns.scatterplot(
+        data=df,
+        x="n",
+        y="detect_time_s",
+        hue="Method",
+        palette=METHOD_COLORS,
+        alpha=0.6,
+        s=50
+    )
+    for method in df["Method"].unique():
+        sns.regplot(
+            data=df[df["Method"] == method],
+            x="n",
+            y="detect_time_s",
+            scatter=False,
+            color=METHOD_COLORS.get(method),
+            line_kws={"linewidth": 2},
+        )
+    ax = plt.gca()
+    ax.set_xscale("linear")
+    ax.set_yscale("log")
+    ax.set_title("Detection Time vs Number of Nodes")
+    ax.set_xlabel("Number of nodes (n)")
+    ax.set_ylabel("Detection time (s) [log scale]")
+    plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
+    plt.tight_layout()
+    out5 = plot_dir / "runtime_vs_n.png"
+    plt.savefig(out5, dpi=300)
+    plt.close()
+    logger.info("Saved plot: %s", out5)
+
+    # 6) Number of communities vs number of nodes (scatter + regression)
+    plt.figure(figsize=(8, 5))
+    sns.scatterplot(
+        data=df,
+        x="n",
+        y="num_comms",
+        hue="Method",
+        palette=METHOD_COLORS,
+        alpha=0.6,
+        s=50
+    )
+    for method in df["Method"].unique():
+        sns.regplot(
+            data=df[df["Method"] == method],
+            x="n",
+            y="num_comms",
+            scatter=False,
+            color=METHOD_COLORS.get(method),
+            line_kws={"linewidth": 2},
+        )
+    ax = plt.gca()
+    ax.set_xscale("linear")
+    ax.set_yscale("linear")
+    ax.set_title("Number of Communities vs Number of Nodes")
+    ax.set_xlabel("Number of nodes (n)")
+    ax.set_ylabel("Number of detected communities")
+    plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
+    plt.tight_layout()
+    out6 = plot_dir / "num_comms_vs_n.png"
+    plt.savefig(out6, dpi=300)
+    plt.close()
+    logger.info("Saved plot: %s", out6)
 
 
 if __name__ == "__main__":
