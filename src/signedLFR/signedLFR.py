@@ -110,7 +110,7 @@ def signed_LFR_benchmark_graph(
     tau2,
     mu,
     P_minus=0.2,
-    P_plus=0.8,
+    P_plus=0.9,
     average_degree=None,
     min_degree=None,
     max_degree=None,
@@ -131,8 +131,8 @@ def signed_LFR_benchmark_graph(
     # == 1) Validate input / generate degree sequence (the usual LFR steps) ==
     if not tau1 > 1:
         raise nx.NetworkXError("tau1 must be > 1")
-    if not tau2 > 1:
-        raise nx.NetworkXError("tau2 must be > 1")
+    if not tau2 >= 1:
+        raise nx.NetworkXError("tau2 must be >= 1")
     if not (0 <= mu <= 1):
         raise nx.NetworkXError("mu must be in [0, 1]")
 
@@ -250,6 +250,31 @@ def _generate_powerlaw_comms(n, tau2, low, high, max_iters, seed=None):
     Generate a powerlaw distribution of community sizes that sums exactly to n.
     In other words, keep drawing community sizes from a powerlaw until the sum = n.
     """
+
+    if tau2 == 1:
+        # Special case: truncated power-law with exponent 1
+        # Compute weights w_k = 1/k for k in [low, high]
+        weights = [1 / k for k in range(low, high + 1)]
+        total_weight = sum(weights)
+        probs = [w / total_weight for w in weights]
+
+        comm_sizes = []
+        while sum(comm_sizes) < n:
+            # Draw a community size from the finite distribution
+            chosen = seed.choices(range(low, high + 1), weights=probs, k=1)[0]
+            comm_sizes.append(chosen)
+
+        # If sum is greater than n, adjust last community size
+        total = sum(comm_sizes)
+        if total > n:
+            excess = total - n
+            comm_sizes[-1] -= excess
+            if comm_sizes[-1] <= 0:
+                # If last community size becomes zero or negative, remove it
+                comm_sizes.pop()
+
+        # At this point, sum(comm_sizes) == n
+        return comm_sizes
 
     def length_condition(comm_sizes):
         # We keep drawing until sum(comm_sizes) >= n
