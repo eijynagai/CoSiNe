@@ -30,6 +30,8 @@ from CoSiNe.community_detection.label_propagation import run_label_propagation
 from CoSiNe.community_detection.leiden import run_leiden
 from CoSiNe.community_detection.louvain import run_louvain
 from CoSiNe.community_detection.louvain_signed import run_louvain_signed
+from CoSiNe.community_detection.spinglass import run_spinglass
+from CoSiNe.community_detection.walktrap import run_walktrap
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -112,10 +114,12 @@ def load_methods(config_path: Path) -> Dict[str, Tuple[str, Dict]]:
         cfg = yaml.safe_load(cf)
     # Define methods with parameters
     methods = {
-        "LouvainSigned": ("signed", {"alpha": 0.6, "resolution": 1.0}),
+        "LouvainSigned": ("signed", {"alpha": 0.4, "resolution": 0.8}),
         "Louvain": ("pos", {"resolution": 1.0}),
         "Leiden": ("pos", {"resolution": 1.0}),
         "Greedy": ("pos", {}),
+        "Spinglass": ("pos", {}),
+        "Walktrap": ("pos", {}),
         "LPA": ("pos", {}),
     }
     return methods
@@ -202,6 +206,10 @@ def run_benchmark_task(
                 comm = run_leiden(Gp, **params)
             elif name == "Greedy":
                 comm = run_greedy_modularity(Gp)
+            elif name == "Spinglass":
+                comm = run_spinglass(Gp)
+            elif name == "Walktrap":
+                comm = run_walktrap(Gp)
             elif name == "LPA":
                 comm = run_label_propagation(Gp)
         detect_time = time.perf_counter() - t0_detect

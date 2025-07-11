@@ -1,7 +1,9 @@
 # config/colors.yaml
 method_colors:
-  LouvainSigned: "#1f77b4"
-  Louvain:       "#ff7f0e"
-  Leiden:        "#2ca02c"
-  Greedy:        "#d62728"
-  LPA:     "#9467bd"
+  LouvainSigned: "#0072B2"   # Blue
+  Louvain:       "#E69F00"   # Orange
+  Leiden:        "#009E73"   # Green
+  Greedy:        "#D55E00"   # Vermilion
+  Spinglass:     "#CC79A7"   # Reddish purple
+  Walktrap:      "#56B4E9"   # Sky blue
+  LPA:           "#F0E42A"   # Yellow-green
