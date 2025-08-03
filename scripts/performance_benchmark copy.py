@@ -9,7 +9,7 @@ import argparse
 import multiprocessing
 import psutil
 from pathlib import Path
-from concurrent.futures import ProcessPoolExecutor, TimeoutError, as_completed
+from concurrent.futures import ProcessPoolExecutor, wait, TimeoutError
 
 script_dir = Path(__file__).resolve().parent
 project_root = script_dir.parent
@@ -21,21 +21,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from collections import Counter
-
-# -----------------------------------------------------------------------------
-# Load best hyperparameters for LouvainSigned
-# -----------------------------------------------------------------------------
-best_params_path = project_root / "src" / "CoSiNe" / "benchmarks" / "hyperparam_tuning" / "results" / "best_params_nmi.json"
-try:
-    with best_params_path.open() as bp_file:
-        _hyper = json.load(bp_file)
-    BEST_ALPHA = float(_hyper.get("alpha", 1.0))
-    BEST_RESOLUTION = float(_hyper.get("gamma", _hyper.get("resolution", 1.0)))
-    logging.info("Loaded hyperparameters: alpha=%s, resolution=%s", BEST_ALPHA, BEST_RESOLUTION)
-except Exception as e:
-    logging.warning("Could not load hyperparameters from %s: %s", best_params_path, e)
-    BEST_ALPHA, BEST_RESOLUTION = 1.0, 1.0
 try:
     from skimage.metrics import variation_of_information
 except ImportError:
@@ -54,8 +39,6 @@ from CoSiNe.community_detection.louvain import run_louvain
 from CoSiNe.community_detection.leiden import run_leiden
 from CoSiNe.community_detection.greedy_modularity import run_greedy_modularity
 from CoSiNe.community_detection.label_propagation import run_label_propagation
-from CoSiNe.community_detection.spinglass import run_spinglass
-from CoSiNe.community_detection.walktrap import run_walktrap
 
 # -----------------------------------------------------------------------------
 # argparse and utility functions
@@ -111,7 +94,8 @@ def log_environment(output_dir: Path) -> None:
             "psutil": psutil.__version__ if hasattr(psutil, "__version__") else "",
         },
     }
-    md_path = output_dir / "performance_benchmark_metadata.json"
+    timestamp = time.strftime("%Y%m%d_%H%M")
+    md_path = output_dir / f"performance_benchmark_metadata_{timestamp}.json"
     with md_path.open("w") as mf:
         json.dump(meta, mf, indent=2)
     logging.info("Saved metadata to %s", md_path)
@@ -132,30 +116,13 @@ except Exception as e:
 # -----------------------------------------------------------------------------
 # Define methods (mirroring runtime_benchmark.py)
 # -----------------------------------------------------------------------------
-
 METHODS = {
-    "LouvainSigned_default": ("signed", {"alpha": 1.0, "resolution": 1.0}),
-    "LouvainSigned_tuned":   ("signed", {"alpha": BEST_ALPHA, "resolution": BEST_RESOLUTION}),
-    "Louvain":               ("pos",    {"resolution": 1.0}),
-    "Leiden":                ("pos",    {"resolution": 1.0}),
-    "Greedy":                ("pos",    {}),
-    "Spinglass":             ("pos",    {}),
-    "Walktrap":              ("pos",    {}),
-    "LPA":                   ("pos",    {}),
+    "LouvainSigned": ("signed", {"alpha": 0.6, "resolution": 1.0}),
+    "Louvain": ("pos", {"resolution": 1.0}),
+    "Leiden": ("pos", {"resolution": 1.0}),
+    "Greedy": ("pos", {}),
+    "LPA": ("pos", {}),
 }
-
-# Ensure consistent ordering and palette for plots
-METHOD_ORDER = [
-    "LouvainSigned_default",
-    "LouvainSigned_tuned",
-    "Louvain",
-    "Leiden",
-    "Greedy",
-    "Spinglass",
-    "Walktrap",
-    "LPA",
-]
-PALETTE_LIST = [METHOD_COLORS.get(m, "#333333") for m in METHOD_ORDER]
 
 # -----------------------------------------------------------------------------
 # Per-task execution: run_performance_task
@@ -203,25 +170,12 @@ def run_performance_task(
         else:
             if method_name == "Louvain":
                 comm = run_louvain(Gp, **params)
-            elif method_name == "Leiden":
+            elif method_name=="Leiden":
                 comm = run_leiden(Gp, **params)
-            elif method_name == "Greedy":
+            elif method_name=="Greedy":
                 comm = run_greedy_modularity(Gp)
-            elif method_name == "Spinglass":
-                try:
-                    comm = run_spinglass(Gp)
-                except Exception as e:
-                    logging.exception(
-                        "Spinglass: detection failed for seed %s, mu %s: %s",
-                        seed, mu, e
-                    )
-                    comm = {n: -1 for n in Gp.nodes()}
-            elif method_name == "Walktrap":
-                comm = run_walktrap(Gp)
-            elif method_name == "LPA":
+            elif method_name=="LPA":
                 comm = run_label_propagation(Gp)
-            else:
-                raise ValueError(f"Unknown method_name: {method_name}")
         detect_time = time.perf_counter() - t0
     except Exception as e:
         return {
@@ -261,20 +215,6 @@ def run_performance_task(
     except Exception:
         vi = np.nan
 
-    # 7) community size statistics
-    sizes = list(Counter(comm.values()).values())
-    comm_size_mean = float(np.mean(sizes))
-    comm_size_std = float(np.std(sizes))
-    num_comms = len(sizes)
-
-    # 8) edge-sign AUPRC
-    y_true_edges = [1 if d["weight"] > 0 else 0 for u, v, d in Gs.edges(data=True)]
-    y_score_edges = [1 if comm.get(u) == comm.get(v) else 0 for u, v, d in Gs.edges(data=True)]
-    try:
-        edge_sign_auprc = average_precision_score(y_true_edges, y_score_edges)
-    except Exception:
-        edge_sign_auprc = np.nan
-
     return dict(
         n=n, tau1=tau1, tau2=tau2, mu=mu, P_minus=P_minus, P_plus=P_plus,
         avg_deg=avg_deg, min_community=min_community, Seed=seed, Method=method_name,
@@ -286,10 +226,6 @@ def run_performance_task(
         frustration=frustration,
         detect_time_s=round(detect_time, 4),
         build_time_s=round(build_time, 4),
-        num_comms=num_comms,
-        comm_size_mean=comm_size_mean,
-        comm_size_std=comm_size_std,
-        edge_sign_auprc=edge_sign_auprc,
     )
 
 # -----------------------------------------------------------------------------
@@ -315,24 +251,21 @@ def run_batch(
     )
     with ProcessPoolExecutor(max_workers=max_workers) as exe:
         futures = {exe.submit(run_performance_task, *t): t for t in batch}
-        for future in as_completed(futures):
-            t = futures[future]
+        done, not_done = wait(futures.keys(), timeout=timeout)
+        for f in not_done:
+            f.cancel()
+        for f in done:
             try:
-                res = future.result(timeout=timeout)
-            except TimeoutError:
-                failures.append({
-                    "n": scenario.get("n"), "tau1": scenario.get("tau1"), "tau2": scenario.get("tau2"),
-                    "mu": scenario.get("mu"), "P_minus": scenario.get("P_minus"), "P_plus": scenario.get("P_plus"),
-                    "avg_deg": scenario.get("avg_deg"), "min_community": scenario.get("min_community"),
-                    "Seed": t[1], "Method": t[2], "error": "timeout"
-                })
-                continue
+                res = f.result()
             except Exception as e:
+                t = futures[f]
                 failures.append({
-                    "n": scenario.get("n"), "tau1": scenario.get("tau1"), "tau2": scenario.get("tau2"),
-                    "mu": scenario.get("mu"), "P_minus": scenario.get("P_minus"), "P_plus": scenario.get("P_plus"),
-                    "avg_deg": scenario.get("avg_deg"), "min_community": scenario.get("min_community"),
-                    "Seed": t[1], "Method": t[2], "error": str(e)
+                    "mu": scenario.get("mu"),
+                    "P_minus": scenario.get("P_minus"),
+                    "P_plus": scenario.get("P_plus"),
+                    "Seed": t[1],
+                    "Method": t[2],
+                    "error": f"exception:{e}",
                 })
                 continue
             if res is None:
@@ -340,8 +273,10 @@ def run_batch(
             if "error" in res:
                 failures.append(res)
             else:
+                # add scenario label if present
                 res["scenario"] = scenario.get("scenario", "")
                 records.append(res)
+        exe.shutdown(wait=False, cancel_futures=True)
     return records, failures
 
 # -----------------------------------------------------------------------------
@@ -351,11 +286,6 @@ def main():
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-
-    # Set up output directory by date
-    date_str = time.strftime("%Y%m%d")
-    outdir = args.output_dir / f"results_{date_str}"
-    outdir.mkdir(parents=True, exist_ok=True)
 
     scenarios_df = pd.read_csv(args.scenarios)
     all_records = []
@@ -390,14 +320,13 @@ def main():
     else:
         summary = pd.DataFrame()
 
-    df.to_csv(outdir / "performance_benchmark.csv", index=False)
-    failure_log.to_csv(outdir / "performance_benchmark_failures.csv", index=False)
-    summary.to_csv(outdir / "performance_benchmark_summary.csv", index=False)
+    timestamp = time.strftime("%Y%m%d_%H%M")
+    outdir = args.output_dir
+    outdir.mkdir(exist_ok=True)
+    df.to_csv(outdir / f"performance_benchmark_{timestamp}.csv", index=False)
+    failure_log.to_csv(outdir / f"performance_benchmark_failures_{timestamp}.csv", index=False)
+    summary.to_csv(outdir / f"performance_benchmark_summary_{timestamp}.csv", index=False)
     logging.info("Saved %d records, %d failures", len(df), len(failure_log))
-    if not failure_log.empty:
-        fail_counts = failure_log['Method'].value_counts()
-        for method, count in fail_counts.items():
-            logging.warning("Failures for %s: %d", method, count)
     log_environment(outdir)
 
     # -----------------------------------------------------------------------------
@@ -406,19 +335,21 @@ def main():
     plot_dir = outdir / "plots"
     plot_dir.mkdir(exist_ok=True)
 
-    metrics = ["NMI", "ARI", "F1", "AUPRC", "frustration"]
+    metrics = ["NMI", "ARI", "F1", "AUPRC", "VI", "frustration"]
     for m in metrics:
         plt.figure(figsize=(8, 5))
+        # draw one box per method using hue, then remove duplicate legend
         ax = sns.boxplot(
             data=df,
             x="Method",
             y=m,
             hue="Method",
-            order=METHOD_ORDER,
             palette=METHOD_COLORS,
-            dodge=False,
-            legend=False
+            dodge=False
         )
+        legend = ax.get_legend()
+        if legend is not None:
+            legend.remove()
         ax.set_title(f"{m} by method")
         ax.set_xlabel("")
         ax.set_ylabel(m)
@@ -431,99 +362,18 @@ def main():
     # paired delta‐plots: signed vs leiden
     # -----------------------------------------------------------------------------
     ref = df[df.Method == "Leiden"]
-    sig = df[df.Method == "LouvainSigned_tuned"]
+    sig = df[df.Method == "LouvainSigned"]
     for m in ["NMI", "ARI", "F1"]:
         merged = pd.merge(sig, ref, on=["mu", "P_minus", "P_plus", "Seed"], suffixes=("_sig", "_ref"))
         merged["Δ" + m] = merged[f"{m}_sig"] - merged[f"{m}_ref"]
         plt.figure(figsize=(6, 4))
-        ax = sns.barplot(
-            x="mu",
-            y="Δ" + m,
-            hue="mu",
-            data=merged,
-            palette="vlag",
-            dodge=False,
-            legend=False
-        )
-        ax.set_title(f"Δ{m}: LouvainSigned_tuned – Leiden")
+        ax = sns.barplot(x="mu", y="Δ" + m, data=merged, palette="vlag")
+        ax.set_title(f"Δ{m}: SignedLouvain – Leiden")
         ax.set_xlabel("Mixing μ")
         ax.set_ylabel(f"Δ{m}")
         plt.tight_layout()
         plt.savefig(plot_dir / f"delta_{m}.png", dpi=300)
         plt.close()
-
-    # -----------------------------
-    # ΔNMI vs P_minus
-    # -----------------------------
-    df_sig = df[df.Method == "LouvainSigned_tuned"]
-    df_louv = df[df.Method == "Louvain"]
-    merged = pd.merge(
-        df_sig, df_louv,
-        on=["mu", "P_minus", "P_plus", "Seed"],
-        suffixes=("_sig", "_louv")
-    )
-    merged["ΔNMI"] = merged["NMI_sig"] - merged["NMI_louv"]
-
-    plt.figure(figsize=(8, 5))
-    ax = sns.lineplot(
-        data=merged,
-        x="P_minus",
-        y="ΔNMI",
-        hue=None,
-        markers=True,
-        style=None,
-        dashes=False,
-        color="black",
-        marker="o",
-        legend=False
-    )
-    ax.set_title("ΔNMI (Signed – Louvain) vs. Negative-edge ratio (P_minus)")
-    ax.set_xlabel("P_minus")
-    ax.set_ylabel("ΔNMI")
-    plt.tight_layout()
-    plt.savefig(plot_dir / "deltaNMI_vs_Pminus.png", dpi=300)
-    plt.close()
-
-    # -----------------------------
-    # Edge-sign AUPRC by method
-    # -----------------------------
-    plt.figure(figsize=(8, 5))
-    ax = sns.boxplot(
-        data=df,
-        x="Method",
-        y="edge_sign_auprc",
-        hue="Method",
-        order=METHOD_ORDER,
-        palette=METHOD_COLORS,
-        dodge=False,
-        legend=False
-    )
-    ax.set_title("Edge-sign AUPRC by method")
-    ax.set_xlabel("")
-    ax.set_ylabel("Edge-sign AUPRC")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.savefig(plot_dir / "edge_sign_auprc.png", dpi=300)
-    plt.close()
-
-    # -----------------------------
-    # Community size distribution by method
-    # -----------------------------
-    plt.figure(figsize=(8, 5))
-    ax = sns.violinplot(
-        data=df,
-        x="Method",
-        y="comm_size_mean",
-        order=METHOD_ORDER,
-        palette=PALETTE_LIST
-    )
-    ax.set_title("Distribution of mean community size by method")
-    ax.set_xlabel("")
-    ax.set_ylabel("Mean community size")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.savefig(plot_dir / "comm_size_mean_violin.png", dpi=300)
-    plt.close()
 
     logging.info("Performance benchmark complete.")
 

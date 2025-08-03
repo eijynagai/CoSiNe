@@ -9,3 +9,7 @@ results/
 plots/
 data/
 src/eeisp.py
+results_old
+Saved_plots/
+config/batch/scenarios_*
+

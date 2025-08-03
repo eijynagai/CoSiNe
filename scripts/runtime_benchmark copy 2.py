@@ -18,7 +18,6 @@ import networkx as nx
 import pandas as pd
 import psutil
 import yaml
-import json
 import matplotlib.pyplot as plt
 import seaborn as sns
 from concurrent.futures import ProcessPoolExecutor, wait
@@ -31,8 +30,6 @@ from CoSiNe.community_detection.label_propagation import run_label_propagation
 from CoSiNe.community_detection.leiden import run_leiden
 from CoSiNe.community_detection.louvain import run_louvain
 from CoSiNe.community_detection.louvain_signed import run_louvain_signed
-from CoSiNe.community_detection.spinglass import run_spinglass
-from CoSiNe.community_detection.walktrap import run_walktrap
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -72,7 +69,7 @@ def parse_args() -> argparse.Namespace:
         "--seeds",
         type=int,
         nargs="+",
-        default=[3, 5, 13, 47, 82],
+        default=[3, 5, 13, 35, 82],
         help="List of random seeds to use for graph generation",
     )
     parser.add_argument(
@@ -102,7 +99,8 @@ def log_environment(output_dir: Path) -> None:
             "pandas": pd.__version__,
         },
     }
-    md_path = output_dir / "runtime_benchmark_metadata.json"
+    timestamp = time.strftime("%Y%m%d_%H%M")
+    md_path = output_dir / f"runtime_benchmark_metadata_{timestamp}.json"
     with md_path.open("w") as mf:
         json.dump(meta, mf, indent=2)
     logger.info("Saved metadata to %s", md_path)
@@ -112,15 +110,13 @@ def load_methods(config_path: Path) -> Dict[str, Tuple[str, Dict]]:
     """Load community detection methods configuration from YAML file."""
     with config_path.open("r") as cf:
         cfg = yaml.safe_load(cf)
+    # Define methods with parameters
     methods = {
-        "LouvainSigned_default": ("signed", {"alpha": 0.6, "resolution": 1.0}),
-        "LouvainSigned_tuned":   ("signed", {"alpha": BEST_ALPHA, "resolution": BEST_RESOLUTION}),
-        "Louvain":               ("pos",    {"resolution": 1.0}),
-        "Leiden":                ("pos",    {"resolution": 1.0}),
-        "Greedy":                ("pos",    {}),
-        "Spinglass":             ("pos",    {}),
-        "Walktrap":              ("pos",    {}),
-        "LPA":                   ("pos",    {}),
+        "LouvainSigned": ("signed", {"alpha": 0.6, "resolution": 1.0}),
+        "Louvain": ("pos", {"resolution": 1.0}),
+        "Leiden": ("pos", {"resolution": 1.0}),
+        "Greedy": ("pos", {}),
+        "LPA": ("pos", {}),
     }
     return methods
 
@@ -137,21 +133,6 @@ except Exception as e:
     logger.warning("Could not load colors from %s: %s", colors_path, e)
     # Fallback to default cycling colors
     METHOD_COLORS = {}
-
-
-# -----------------------------------------------------------------------------
-# Load best hyperparameters for LouvainSigned
-# -----------------------------------------------------------------------------
-best_params_path = project_root / "src" / "CoSiNe" / "benchmarks" / "hyperparam_tuning" / "results" / "best_params_nmi.json"
-try:
-    with best_params_path.open() as bp_file:
-        _hyper = json.load(bp_file)
-    BEST_ALPHA = float(_hyper.get("alpha", 0.6))
-    BEST_RESOLUTION = float(_hyper.get("gamma", _hyper.get("resolution", 1.0)))
-    logger.info("Loaded LouvainSigned tuned hyperparameters: alpha=%s, resolution=%s", BEST_ALPHA, BEST_RESOLUTION)
-except Exception as e:
-    logger.warning("Could not load hyperparameters from %s: %s", best_params_path, e)
-    BEST_ALPHA, BEST_RESOLUTION = 1.0, 1.0
 
 
 def run_benchmark_task(
@@ -213,20 +194,16 @@ def run_benchmark_task(
     try:
         t0_detect = time.perf_counter()
         if gtype == "signed":
-            comm = run_louvain_signed(Gp, Gn, **params)
+            run_louvain_signed(Gp, Gn, **params)
         else:
             if name == "Louvain":
-                comm = run_louvain(Gp, **params)
+                run_louvain(Gp, **params)
             elif name == "Leiden":
-                comm = run_leiden(Gp, **params)
+                run_leiden(Gp, **params)
             elif name == "Greedy":
-                comm = run_greedy_modularity(Gp)
-            elif name == "Spinglass":
-                comm = run_spinglass(Gp)
-            elif name == "Walktrap":
-                comm = run_walktrap(Gp)
+                run_greedy_modularity(Gp)
             elif name == "LPA":
-                comm = run_label_propagation(Gp)
+                run_label_propagation(Gp)
         detect_time = time.perf_counter() - t0_detect
     except Exception as e:
         return {
@@ -243,12 +220,6 @@ def run_benchmark_task(
             "error": f"DetectionError: {e}",
         }
 
-    # compute number of communities detected
-    if isinstance(comm, dict):
-        num_comms = len(set(comm.values()))
-    else:
-        num_comms = len(set(comm))
-
     return {
         "n": n,
         "tau1": tau1,
@@ -262,7 +233,6 @@ def run_benchmark_task(
         "Method": name,
         "build_time_s": round(build_time, 4),
         "detect_time_s": round(detect_time, 4),
-        "num_comms": num_comms,
     }
 
 
@@ -354,6 +324,7 @@ def save_results(
     df: pd.DataFrame,
     failures: pd.DataFrame,
     summary: pd.DataFrame,
+    timestamp: str,
 ) -> None:
     """Save benchmark results, failures, and summary CSV files.
 
@@ -362,18 +333,19 @@ def save_results(
         df: DataFrame with successful results.
         failures: DataFrame with failure records.
         summary: DataFrame with aggregated summary statistics.
+        timestamp: Timestamp string for filenames.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
-    run_csv = output_dir / "runtime_benchmark.csv"
+    run_csv = output_dir / f"runtime_benchmark_{timestamp}.csv"
     df.to_csv(run_csv, index=False)
     logger.info("Saved runtime results to %s", run_csv)
 
     if not failures.empty:
-        failure_csv = output_dir / "runtime_benchmark_failures.csv"
+        failure_csv = output_dir / f"runtime_benchmark_failures_{timestamp}.csv"
         failures.to_csv(failure_csv, index=False)
         logger.warning("Saved %d failures to %s", len(failures), failure_csv)
 
-    summary_csv = output_dir / "runtime_benchmark_summary.csv"
+    summary_csv = output_dir / f"runtime_benchmark_summary_{timestamp}.csv"
     summary.to_csv(summary_csv, index=False)
     logger.info("Saved summary to %s", summary_csv)
 
@@ -413,13 +385,10 @@ def main(args: argparse.Namespace) -> None:
         summary = pd.DataFrame()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    date_str = time.strftime("%Y%m%d")
-    dated_dir = args.output_dir / f"results_{date_str}"
-    dated_dir.mkdir(parents=True, exist_ok=True)
-    args.output_dir = dated_dir
     log_environment(args.output_dir)
 
-    save_results(args.output_dir, df, failure_log, summary)
+    timestamp = time.strftime("%Y%m%d_%H%M")
+    save_results(args.output_dir, df, failure_log, summary, timestamp)
 
     total = len(all_records) + len(all_failures)
     if total > 0:
@@ -455,10 +424,9 @@ def main(args: argparse.Namespace) -> None:
             hue="Method",
             palette=METHOD_COLORS
         )
-        ax.set_yscale("log")
         ax.set_title(f"Detection Time vs Average Degree ({scen})")
         ax.set_xlabel("Average degree (⟨k⟩)")
-        ax.set_ylabel("Detection time (s) [log scale]")
+        ax.set_ylabel("Detection time (s)")
         plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
         plt.tight_layout()
         out1 = plot_dir / f"{scen}_runtime_vs_degree.png"
@@ -480,10 +448,9 @@ def main(args: argparse.Namespace) -> None:
             errorbar="sd",
             palette=METHOD_COLORS
         )
-        ax.set_yscale("log")
         ax.set_title(f"Detection Time vs Mixing μ ({scen})")
         ax.set_xlabel("Mixing parameter μ")
-        ax.set_ylabel("Detection time (s) [log scale]")
+        ax.set_ylabel("Detection time (s)")
         plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
         plt.tight_layout()
         out2 = plot_dir / f"{scen}_runtime_vs_mu.png"
@@ -505,118 +472,15 @@ def main(args: argparse.Namespace) -> None:
             errorbar="sd",
             palette=METHOD_COLORS
         )
-        ax.set_yscale("log")
         ax.set_title(f"Detection Time vs P_plus ({scen})")
         ax.set_xlabel("Positive edge fraction P_plus")
-        ax.set_ylabel("Detection time (s) [log scale]")
+        ax.set_ylabel("Detection time (s)")
         plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
         plt.tight_layout()
         out3 = plot_dir / f"{scen}_runtime_vs_pplus.png"
         plt.savefig(out3, dpi=300)
         plt.close()
         logger.info("Saved plot: %s", out3)
-
-        # 4) Detection time vs number of communities (scatter + regression)
-        plt.figure(figsize=(8, 5))
-        # scatter of raw points
-        sns.scatterplot(
-            data=df_s,
-            x="num_comms",
-            y="detect_time_s",
-            hue="Method",
-            palette=METHOD_COLORS,
-            alpha=0.6,
-            s=50
-        )
-        # overlay linear regression per method
-        for method in df_s["Method"].unique():
-            sns.regplot(
-                data=df_s[df_s["Method"] == method],
-                x="num_comms",
-                y="detect_time_s",
-                scatter=False,
-                color=METHOD_COLORS.get(method),
-                line_kws={"linewidth": 2},
-            )
-        ax = plt.gca()
-        ax.set_xscale("linear")
-        ax.set_yscale("log")
-        ax.set_title(f"Detection Time vs Number of Communities ({scen})")
-        ax.set_xlabel("Number of detected communities")
-        ax.set_ylabel("Detection time (s) [log scale]")
-        plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
-        plt.tight_layout()
-        out4 = plot_dir / f"{scen}_runtime_vs_num_comms.png"
-        plt.savefig(out4, dpi=300)
-        plt.close()
-        logger.info("Saved plot: %s", out4)
-
-    # ---- Cross-scenario global plots ----
-    # 5) Detection time vs number of nodes (scatter + regression)
-    plt.figure(figsize=(8, 5))
-    sns.scatterplot(
-        data=df,
-        x="n",
-        y="detect_time_s",
-        hue="Method",
-        palette=METHOD_COLORS,
-        alpha=0.6,
-        s=50
-    )
-    for method in df["Method"].unique():
-        sns.regplot(
-            data=df[df["Method"] == method],
-            x="n",
-            y="detect_time_s",
-            scatter=False,
-            color=METHOD_COLORS.get(method),
-            line_kws={"linewidth": 2},
-        )
-    ax = plt.gca()
-    ax.set_xscale("linear")
-    ax.set_yscale("log")
-    ax.set_title("Detection Time vs Number of Nodes")
-    ax.set_xlabel("Number of nodes (n)")
-    ax.set_ylabel("Detection time (s) [log scale]")
-    plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
-    plt.tight_layout()
-    out5 = plot_dir / "runtime_vs_n.png"
-    plt.savefig(out5, dpi=300)
-    plt.close()
-    logger.info("Saved plot: %s", out5)
-
-    # 6) Number of communities vs number of nodes (scatter + regression)
-    plt.figure(figsize=(8, 5))
-    sns.scatterplot(
-        data=df,
-        x="n",
-        y="num_comms",
-        hue="Method",
-        palette=METHOD_COLORS,
-        alpha=0.6,
-        s=50
-    )
-    for method in df["Method"].unique():
-        sns.regplot(
-            data=df[df["Method"] == method],
-            x="n",
-            y="num_comms",
-            scatter=False,
-            color=METHOD_COLORS.get(method),
-            line_kws={"linewidth": 2},
-        )
-    ax = plt.gca()
-    ax.set_xscale("linear")
-    ax.set_yscale("linear")
-    ax.set_title("Number of Communities vs Number of Nodes")
-    ax.set_xlabel("Number of nodes (n)")
-    ax.set_ylabel("Number of detected communities")
-    plt.legend(title="Method", bbox_to_anchor=(1.05, 1), loc="upper left")
-    plt.tight_layout()
-    out6 = plot_dir / "num_comms_vs_n.png"
-    plt.savefig(out6, dpi=300)
-    plt.close()
-    logger.info("Saved plot: %s", out6)
 
 
 if __name__ == "__main__":
