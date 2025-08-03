@@ -1,9 +1,10 @@
 # config/colors.yaml
 method_colors:
-  LouvainSigned: "#0072B2"   # Blue
-  Louvain:       "#E69F00"   # Orange
-  Leiden:        "#009E73"   # Green
-  Greedy:        "#D55E00"   # Vermilion
-  Spinglass:     "#CC79A7"   # Reddish purple
-  Walktrap:      "#56B4E9"   # Sky blue
-  LPA:           "#F0E42A"   # Yellow-green
+  LouvainSigned_default:  "#56B4E9"   # Blue for default
+  LouvainSigned_tuned:    "#005A9C"   # Darker blue for tuned
+  Louvain:                "#E69F00"   # Orange
+  Leiden:                 "#009E73"   # Green
+  Greedy:                 "#D55E00"   # Vermilion
+  Spinglass:              "#CC79A7"   # Reddish purple
+  Walktrap:               "#78f5ae"   # Light-green
+  LPA:                    "#F0E42A"   # Yellow-green
